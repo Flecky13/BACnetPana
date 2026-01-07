@@ -23,7 +23,8 @@
                     </Button>
                     <Button x:Name="AnalysisButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="150"
                             Background="#107C10" Foreground="White" FontSize="16"
-                            Click="AnalysisButton_Click">
+                            Click="AnalysisButton_Click"
+                            IsEnabled="{Binding IsAnalysisReady}">
                         <TextBlock Text="🔄 Analysieren" TextWrapping="NoWrap"/>
                     </Button>
                     <Button Padding="15,10" Margin="5" MinHeight="50" MinWidth="150"
@@ -39,14 +40,24 @@
                 </StackPanel>
             </Grid>
 
-            <!-- Progress Bar -->
-            <Grid Grid.Row="1" Background="#1E1E1E" Height="30" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <!-- Progress Bars -->
+            <Grid Grid.Row="1" Background="#1E1E1E" Height="40" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <ProgressBar Grid.Column="0" Value="{Binding LoadProgress}" Maximum="100" Background="#404040" Foreground="#0078D4" Margin="0" Height="30"/>
-                <TextBlock Grid.Column="1" Text="{Binding LoadingMessage}" Foreground="White" Padding="10" VerticalAlignment="Center" FontSize="11"/>
+
+                <!-- Phase 1 Progress -->
+                <Grid Grid.Column="0" Margin="0,0,2,0">
+                    <ProgressBar Value="{Binding Phase1Progress}" Maximum="100" Background="#404040" Foreground="#0078D4" Height="40"/>
+                    <TextBlock Text="{Binding Phase1Message}" Foreground="White" Padding="10,0" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
+                </Grid>
+
+                <!-- Phase 2 Progress -->
+                <Grid Grid.Column="1" Margin="2,0,0,0">
+                    <ProgressBar Value="{Binding Phase2Progress}" Maximum="100" Background="#404040" Foreground="#28A745" Height="40"/>
+                    <TextBlock Text="{Binding Phase2Message}" Foreground="White" Padding="10,0" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
+                </Grid>
             </Grid>
         </Grid>
 

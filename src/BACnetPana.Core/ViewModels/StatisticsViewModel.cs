@@ -22,6 +22,9 @@ namespace BACnetPana.Core.ViewModels
         [ObservableProperty]
         private ObservableCollection<PortChartData> portData;
 
+        [ObservableProperty]
+        private bool bacnetPacketsExist = false;
+
         public StatisticsViewModel()
         {
             protocolData = new ObservableCollection<ProtocolChartData>();

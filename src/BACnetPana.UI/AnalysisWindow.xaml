@@ -69,34 +69,8 @@
                 </Grid>
             </Border>
 
-            <!-- BACnet-Datenbasis-Statistik -->
-            <Border Grid.Row="1" Background="#E8F5E9" BorderBrush="#4CAF50" BorderThickness="1" Padding="10" Margin="0,0,0,8" x:Name="BACnetDatabaseStatsBorder" Visibility="Collapsed">
-                <StackPanel>
-                    <TextBlock Text="📊 BACnet-Datenbasis" FontWeight="Bold" FontSize="13" Foreground="#2E7D32" Margin="0,0,0,6"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,0">
-                            <TextBlock Text="Geräte mit Instanznummer:" FontWeight="SemiBold" Margin="0,0,6,0"/>
-                            <TextBlock x:Name="BACnetDbInstanceCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0">
-                            <TextBlock Text="Geräte mit Namen:" FontWeight="SemiBold" Margin="0,0,6,0"/>
-                            <TextBlock x:Name="BACnetDbDeviceNameCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="2" Orientation="Horizontal">
-                            <TextBlock Text="Geräte mit Vendor-ID:" FontWeight="SemiBold" Margin="0,0,6,0"/>
-                            <TextBlock x:Name="BACnetDbVendorCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-            </Border>
-
-            <!-- Zeitbereich (fixiert) -->
-            <Border Grid.Row="2" Background="#F9F9F9" BorderBrush="#CCCCCC" BorderThickness="1" Padding="10" Margin="0,0,0,8">
+            <!-- Zeitbereich (fixiert) - MOVED TO TOP -->
+            <Border Grid.Row="1" Background="#F9F9F9" BorderBrush="#CCCCCC" BorderThickness="1" Padding="10" Margin="0,0,0,8">
                 <StackPanel>
                     <TextBlock Text="Zeitbereich (für alle Charts)" FontWeight="Bold" Margin="0,0,0,6"/>
 
@@ -158,167 +132,212 @@
             <!-- Scrollable Content -->
             <ScrollViewer Grid.Row="3" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Background="#F7F7F7">
                 <StackPanel Margin="0,0,0,8">
-                    <!-- Zeitdiagramm -->
-                    <Border Background="White" BorderBrush="#CCCCCC" BorderThickness="1" Padding="0" Margin="0,0,0,8" MinHeight="260">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <TextBlock Grid.Row="0" Text="Pakete pro Sekunde" Background="#F5F5F5" Padding="10" FontWeight="Bold"/>
-                            <oxy:PlotView Grid.Row="1" x:Name="TimeChart" Margin="10" PreviewMouseWheel="PlotView_PreviewMouseWheel"/>
-                        </Grid>
+
+                    <!-- ═══════════════════════════════════════════════════════════════════ -->
+                    <!-- ALLGEMEINE ANALYSEN -->
+                    <!-- ═══════════════════════════════════════════════════════════════════ -->
+                    <Border Background="#F0F8FF" BorderBrush="#0078D4" BorderThickness="2" Padding="8" Margin="0,0,0,12" CornerRadius="4">
+                        <StackPanel>
+                            <TextBlock Text="📊 ALLGEMEINE ANALYSEN" FontWeight="Bold" FontSize="14" Foreground="#0078D4" Margin="0,0,0,8"/>
+
+                            <!-- Zeitdiagramm -->
+                            <Border Background="White" BorderBrush="#CCCCCC" BorderThickness="1" Padding="0" Margin="0,0,0,8" MinHeight="260">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="Pakete pro Sekunde" Background="#F5F5F5" Padding="10" FontWeight="Bold"/>
+                                    <oxy:PlotView Grid.Row="1" x:Name="TimeChart" Margin="10" PreviewMouseWheel="PlotView_PreviewMouseWheel"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- TCP Analysis Section -->
+                            <Border x:Name="TcpAnalysisBorder" Background="White" BorderBrush="#FFC107" BorderThickness="2" Padding="15" Margin="0,0,0,8" MinHeight="160" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Text="⚠️ TCP-Analyse (Probleme)" FontWeight="Bold" FontSize="13" Margin="0,0,0,8" Foreground="#D13438"/>
+
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="6,0">
+                                        <TextBlock Text="Neuübertragungen:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="TcpRetransmissionLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="Doppelte ACKs:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="TcpDuplicateAckLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="6,0">
+                                        <TextBlock Text="Schnelle Neuübertragungen:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="TcpFastRetransmissionLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="3" Margin="6,0">
+                                        <TextBlock Text="Reset-Flags:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="TcpResetLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+
+                            <!-- Broadcast Section -->
+                            <Border Background="White" BorderBrush="#E0E0E0" BorderThickness="1" Padding="15" Margin="0,0,0,0" MinHeight="280">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="Broadcasts (Top Absender)" FontWeight="Bold" Margin="0,0,0,6"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="BroadcastCountLabel" Text="Broadcasts: 0" HorizontalAlignment="Right" FontWeight="Bold" Foreground="#D13438"/>
+
+                                    <oxy:PlotView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="BroadcastChart" Height="240" Margin="0,6,0,0" PreviewMouseWheel="PlotView_PreviewMouseWheel" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
                     </Border>
 
-                    <!-- TCP Analysis Section -->
-                    <Border x:Name="TcpAnalysisBorder" Background="White" BorderBrush="#FFC107" BorderThickness="1" Padding="15" Margin="0,0,0,8" MinHeight="160" Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                    <!-- ═══════════════════════════════════════════════════════════════════ -->
+                    <!-- BACNET-ANALYSEN -->
+                    <!-- ═══════════════════════════════════════════════════════════════════ -->
+                    <Border x:Name="BACnetSectionBorder" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="2" Padding="8" Margin="0,0,0,8" CornerRadius="4" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="🏢 BACNET-ANALYSEN" FontWeight="Bold" FontSize="14" Foreground="#28A745" Margin="0,0,0,8"/>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Text="TCP-Analyse (Probleme)" FontWeight="Bold" Margin="0,0,0,8" Foreground="#D13438"/>
+                            <!-- BACnet-Datenbasis-Statistik -->
+                            <Border Background="#E8F5E9" BorderBrush="#4CAF50" BorderThickness="2" Padding="10" Margin="0,0,0,8" x:Name="BACnetDatabaseStatsBorder" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="📊 BACnet-Datenbasis" FontWeight="Bold" FontSize="13" Foreground="#2E7D32" Margin="0,0,0,6"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,0">
+                                            <TextBlock Text="Geräte mit Instanznummer:" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="BACnetDbInstanceCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0">
+                                            <TextBlock Text="Geräte mit Namen:" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="BACnetDbDeviceNameCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                            <TextBlock Text="Geräte mit Vendor-ID:" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="BACnetDbVendorCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
 
-                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="6,0">
-                                <TextBlock Text="Neuübertragungen:" FontWeight="Bold"/>
-                                <TextBlock x:Name="TcpRetransmissionLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0">
-                                <TextBlock Text="Doppelte ACKs:" FontWeight="Bold"/>
-                                <TextBlock x:Name="TcpDuplicateAckLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="6,0">
-                                <TextBlock Text="Schnelle Neuübertragungen:" FontWeight="Bold"/>
-                                <TextBlock x:Name="TcpFastRetransmissionLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="3" Margin="6,0">
-                                <TextBlock Text="Reset-Flags:" FontWeight="Bold"/>
-                                <TextBlock x:Name="TcpResetLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
+                            <!-- BACnet Analysis Section -->
+                            <Border x:Name="BACnetAnalysisBorder" Background="White" BorderBrush="#28A745" BorderThickness="2" Padding="15" Margin="0,0,0,8" MinHeight="200" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                    <!-- BACnet Analysis Section -->
-                    <Border x:Name="BACnetAnalysisBorder" Background="White" BorderBrush="#28A745" BorderThickness="1" Padding="15" Margin="0,0,0,8" MinHeight="200" Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Text="BACnet-Analyse" FontWeight="Bold" FontSize="13" Margin="0,0,0,8" Foreground="#28A745"/>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Text="BACnet-Analyse" FontWeight="Bold" Margin="0,0,0,8" Foreground="#28A745"/>
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="6,0">
+                                        <TextBlock Text="Who-Is / Minute:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetWhoIsLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="Broadcasts / Sekunde:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetBroadcastsLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="6,0">
+                                        <TextBlock Text="Confirmed Requests / s:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetConfirmedReqLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="3" Margin="6,0">
+                                        <TextBlock Text="Retries / Sekunde:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetRetriesLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="6,0">
-                                <TextBlock Text="Who-Is / Minute:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetWhoIsLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0">
-                                <TextBlock Text="Broadcasts / Sekunde:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetBroadcastsLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="6,0">
-                                <TextBlock Text="Confirmed Requests / s:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetConfirmedReqLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="3" Margin="6,0">
-                                <TextBlock Text="Retries / Sekunde:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetRetriesLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
-                            </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="6,0">
+                                        <TextBlock Text="Abort / Reject:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetAbortRejectLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="RTT ReadProperty:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetRTTLabel" Text="—" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="2" Margin="6,0">
+                                        <TextBlock Text="Segmented Messages:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetSegmentedLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="3" Margin="6,0">
+                                        <TextBlock Text="BBMD Registrierungen:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetBBMDLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
 
-                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="6,0">
-                                <TextBlock Text="Abort / Reject:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetAbortRejectLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,0">
-                                <TextBlock Text="RTT ReadProperty:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetRTTLabel" Text="—" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="2" Margin="6,0">
-                                <TextBlock Text="Segmented Messages:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetSegmentedLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="3" Margin="6,0">
-                                <TextBlock Text="BBMD Registrierungen:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetBBMDLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
+                            <!-- BACnet Services Analysis Section -->
+                            <Border x:Name="BACnetServicesAnalysisBorder" Background="White" BorderBrush="#17A2B8" BorderThickness="2" Padding="15" Margin="0,0,0,0" MinHeight="200" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
 
-                    <!-- BACnet Services Analysis Section -->
-                    <Border x:Name="BACnetServicesAnalysisBorder" Background="White" BorderBrush="#17A2B8" BorderThickness="1" Padding="15" Margin="0,0,0,8" MinHeight="200" Visibility="Collapsed">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Text="BACnet-Services" FontWeight="Bold" FontSize="13" Margin="0,0,0,8" Foreground="#17A2B8"/>
 
-                            <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="3" Text="BACnet-Services" FontWeight="Bold" Margin="0,0,0,8" Foreground="#17A2B8"/>
+                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="6,0">
+                                        <TextBlock Text="Read/Write Property:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetReadWriteLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="Confirmed Services:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetConfirmedServLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="6,0">
+                                        <TextBlock Text="Schnelle Responses (&lt;200ms):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetFastResponseLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
+                                    </StackPanel>
 
-                            <StackPanel Grid.Row="1" Grid.Column="0" Margin="6,0">
-                                <TextBlock Text="Read/Write Property:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetReadWriteLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0">
-                                <TextBlock Text="Confirmed Services:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetConfirmedServLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="1" Grid.Column="2" Margin="6,0">
-                                <TextBlock Text="Schnelle Responses (&lt;200ms):" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetFastResponseLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
-                            </StackPanel>
-
-                            <StackPanel Grid.Row="2" Grid.Column="0" Margin="6,0">
-                                <TextBlock Text="Fehler/Ablehnungen:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetErrorsLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,0">
-                                <TextBlock Text="Network Layer Msgs:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetNetworkMsgLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
-                            </StackPanel>
-                            <StackPanel Grid.Row="2" Grid.Column="2" Margin="6,0">
-                                <TextBlock Text="Segmented == 1:" FontWeight="Bold"/>
-                                <TextBlock x:Name="BACnetSegmentedFlagLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
-                            </StackPanel>
-                        </Grid>
-                    </Border>
-
-                    <!-- Broadcast Section -->
-                    <Border Background="White" BorderBrush="#E0E0E0" BorderThickness="1" Padding="15" Margin="0,0,0,0" MinHeight="280">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="2*"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <TextBlock Grid.Row="0" Grid.Column="0" Text="Broadcasts (Top Absender)" FontWeight="Bold" Margin="0,0,0,6"/>
-                            <TextBlock Grid.Row="0" Grid.Column="1" x:Name="BroadcastCountLabel" Text="Broadcasts: 0" HorizontalAlignment="Right" FontWeight="Bold" Foreground="#D13438"/>
-
-                            <oxy:PlotView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="BroadcastChart" Height="240" Margin="0,6,0,0" PreviewMouseWheel="PlotView_PreviewMouseWheel" />
-                        </Grid>
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="6,0">
+                                        <TextBlock Text="Fehler/Ablehnungen:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetErrorsLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="Network Layer Msgs:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetNetworkMsgLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="2" Grid.Column="2" Margin="6,0">
+                                        <TextBlock Text="Segmented == 1:" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetSegmentedFlagLabel" Text="0" FontSize="16" Foreground="#17A2B8" FontWeight="Bold"/>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </ScrollViewer>

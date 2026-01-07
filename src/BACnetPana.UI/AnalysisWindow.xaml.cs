@@ -32,6 +32,9 @@ namespace BACnetPana.UI
             _activeFilter = activeFilter ?? string.Empty;
             _bacnetDb = bacnetDatabase ?? new BACnetDatabase();
 
+            // Debug: Log BACnet-Datenbank Status
+            System.Diagnostics.Debug.WriteLine($"AnalysisWindow: BACnetDatabase empfangen - IpToInstance: {_bacnetDb.IpToInstance?.Count ?? 0}, IpToDeviceName: {_bacnetDb.IpToDeviceName?.Count ?? 0}");
+
             ConfigurePlotController();
 
             UpdateTitleWithFilter();
@@ -47,25 +50,6 @@ namespace BACnetPana.UI
         private void LoadAnalysis()
         {
             // BACnet-Datenbasis wurde bereits beim Einlesen der PCAP aufgebaut und geloggt
-
-            // Update UI mit BACnet-Datenbasis-Statistiken
-            if (BACnetDatabaseStatsBorder != null)
-            {
-                if (_bacnetDb.IpToInstance.Count > 0)
-                {
-                    BACnetDatabaseStatsBorder.Visibility = Visibility.Visible;
-                    if (BACnetDbInstanceCountLabel != null)
-                        BACnetDbInstanceCountLabel.Text = _bacnetDb.IpToInstance.Count.ToString();
-                    if (BACnetDbDeviceNameCountLabel != null)
-                        BACnetDbDeviceNameCountLabel.Text = _bacnetDb.IpToDeviceName.Count.ToString();
-                    if (BACnetDbVendorCountLabel != null)
-                        BACnetDbVendorCountLabel.Text = _bacnetDb.IpToVendorId.Count.ToString();
-                }
-                else
-                {
-                    BACnetDatabaseStatsBorder.Visibility = Visibility.Collapsed;
-                }
-            }
 
             // Berechne Zusammenfassung
             var packetCount = _packets.Count;
@@ -254,17 +238,35 @@ namespace BACnetPana.UI
 
         private void UpdateBroadcastSection(List<NetworkPacket> filteredPackets)
         {
+            // First check if there are any BACnet packets
+            var bacnetPackets = filteredPackets.Where(p =>
+                (p.ApplicationProtocol?.ToUpper() == "BACNET") ||
+                (p.DestinationPort >= 47808 && p.DestinationPort <= 47823) ||
+                (p.SourcePort >= 47808 && p.SourcePort <= 47823)).ToList();
+
+            bool hasBACnetPackets = bacnetPackets.Count > 0;
+
             // TCP Analysis
             UpdateTcpAnalysis(filteredPackets);
 
-            // BACnet Analysis
-            UpdateBACnetAnalysis(filteredPackets);
+            // BACnet Analysis (only if BACnet packets exist)
+            if (hasBACnetPackets)
+            {
+                // Show the entire BACnet section
+                if (BACnetSectionBorder != null)
+                    BACnetSectionBorder.Visibility = Visibility.Visible;
 
-            // BACnet Services Analysis
-            UpdateBACnetServicesAnalysis(filteredPackets);
-
-            // BACnet ReadProperties Analysis
-            UpdateBACnetReadPropertiesAnalysis(filteredPackets);
+                UpdateBACnetDatabaseStats();
+                UpdateBACnetAnalysis(filteredPackets);
+                UpdateBACnetServicesAnalysis(filteredPackets);
+                UpdateBACnetReadPropertiesAnalysis(filteredPackets);
+            }
+            else
+            {
+                // Hide the entire BACnet section when no BACnet packets
+                if (BACnetSectionBorder != null)
+                    BACnetSectionBorder.Visibility = Visibility.Collapsed;
+            }
 
             var broadcastPackets = filteredPackets
                 .Where(IsBroadcast)
@@ -804,6 +806,23 @@ namespace BACnetPana.UI
                         propertyAccessByInstance[label] = 0;
                     propertyAccessByInstance[label] += propertyCount;
                 }
+            }
+        }
+
+        private void UpdateBACnetDatabaseStats()
+        {
+            // Update UI mit BACnet-Datenbasis-Statistiken
+            // Zeige die Statistik an, auch wenn die Datenbank leer ist (dann zeigt sie 0)
+            if (BACnetDatabaseStatsBorder != null && _bacnetDb != null)
+            {
+                BACnetDatabaseStatsBorder.Visibility = Visibility.Visible;
+
+                if (BACnetDbInstanceCountLabel != null)
+                    BACnetDbInstanceCountLabel.Text = (_bacnetDb.IpToInstance?.Count ?? 0).ToString();
+                if (BACnetDbDeviceNameCountLabel != null)
+                    BACnetDbDeviceNameCountLabel.Text = (_bacnetDb.IpToDeviceName?.Count ?? 0).ToString();
+                if (BACnetDbVendorCountLabel != null)
+                    BACnetDbVendorCountLabel.Text = (_bacnetDb.IpToVendorId?.Count ?? 0).ToString();
             }
         }
     }

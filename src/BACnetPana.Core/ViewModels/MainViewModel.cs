@@ -44,7 +44,28 @@ namespace BACnetPana.Core.ViewModels
         private int loadProgress;
 
         [ObservableProperty]
+        private int phase1Progress;
+
+        [ObservableProperty]
+        private int phase2Progress;
+
+        [ObservableProperty]
+        private string phase1Message = "Phase 1: Bereit";
+
+        [ObservableProperty]
+        private string phase2Message = "Phase 2: Warte auf Phase 1";
+
+        [ObservableProperty]
         private BACnetDatabase? bacnetDatabase;
+
+        [ObservableProperty]
+        private bool isPhase1Complete;
+
+        [ObservableProperty]
+        private bool isPhase2Complete;
+
+        [ObservableProperty]
+        private bool isAnalysisReady;
 
         public MainViewModel()
         {
@@ -63,6 +84,7 @@ namespace BACnetPana.Core.ViewModels
             try
             {
                 _tsharkParser = new TSharkBACnetParser();
+                _tsharkParser.ProgressChanged += OnPhase2ProgressChanged;
                 if (_tsharkParser.IsTSharkAvailable())
                 {
                     _tsharkAvailable = true;
@@ -96,13 +118,23 @@ namespace BACnetPana.Core.ViewModels
             try
             {
                 IsLoading = true;
+                IsPhase1Complete = false;
+                IsPhase2Complete = false;
+                IsAnalysisReady = false;
                 LoadingMessage = "Lade Capture-Datei...";
+                LoadProgress = 0;
+                Phase1Progress = 0;
+                Phase2Progress = 0;
+                Phase1Message = "Phase 1: Starte...";
+                Phase2Message = "Phase 2: Warte auf Phase 1";
                 Packets.Clear();
                 LoadedPacketCount = 0;
 
                 AddLog($"Öffne Datei: {filePath}");
 
                 // Phase 1: Mit SharpPcap alle Pakete einlesen (für Protokoll-Statistik)
+                LoadingMessage = "Phase 1/2: Lese Pakete...";
+                Phase1Message = "Phase 1: Lese Pakete ...";
                 AddLog("Phase 1: Lese alle Pakete mit SharpPcap...");
                 var packetList = await _sharpPcapReader.ReadPcapFileAsync(filePath);
 
@@ -112,6 +144,12 @@ namespace BACnetPana.Core.ViewModels
 
                 // Speichere BACnet-Datenbasis von SharpPcap
                 BacnetDatabase = _sharpPcapReader.BACnetDb;
+
+                IsPhase1Complete = true;
+                Phase1Progress = 100;
+                Phase1Message = "Phase 1: Abgeschlossen ✅";
+                LoadProgress = _tsharkAvailable ? 50 : 100;
+                LoadingMessage = _tsharkAvailable ? "Phase 1/2 abgeschlossen. Phase 2/2: TShark-Analyse läuft..." : "Fertig: Alle Pakete geladen";
 
                 AddLog($"✅ SharpPcap: {completePackets.Count} komplette Pakete geladen");
                 if (reassembledCount > 0)
@@ -140,6 +178,9 @@ namespace BACnetPana.Core.ViewModels
                 // TShark analysiert UNABHÄNGIG und sucht nach BACnet-Paketen
                 if (_tsharkAvailable && _tsharkParser != null)
                 {
+                    LoadingMessage = "Phase 2/2: Analysiere BACnet-Details...";
+                    Phase2Message = "Phase 2: Starte BACnet-Analyse...";
+                    Phase2Progress = 0;
                     AddLog("Phase 2: Analysiere BACnet-Details mit TShark...");
 
                     // TShark-Analyse im Hintergrund, nicht blockierend
@@ -154,6 +195,13 @@ namespace BACnetPana.Core.ViewModels
                                 _synchronizationContext.Post(_ =>
                                 {
                                     AddLog("Phase 2: Übersprungen (TShark fand keine Pakete)");
+                                    IsPhase2Complete = true;
+                                    IsAnalysisReady = true;
+                                    IsLoading = false;
+                                    LoadProgress = 100;
+                                    Phase2Progress = 100;
+                                    Phase2Message = "Phase 2: Keine BACnet-Pakete gefunden";
+                                    LoadingMessage = "Fertig: Alle Pakete geladen (TShark: keine BACnet-Pakete)";
                                 }, null);
                                 return;
                             }
@@ -168,6 +216,11 @@ namespace BACnetPana.Core.ViewModels
 
                             // Merge BACnet-Details in bestehende Pakete
                             int enrichedCount = 0;
+                            _synchronizationContext.Post(_ =>
+                            {
+                                Phase2Message = $"Phase 2: Merge {tsharkPackets.Count:N0} Pakete...";
+                                Phase2Progress = 95;
+                            }, null);
                             foreach (var tsharkPacket in tsharkPackets.Where(p => p.ApplicationProtocol == "BACnet" && p.Details.Count > 0))
                             {
                                 // Nutze Index für O(1) Zugriff statt O(n) FirstOrDefault
@@ -194,6 +247,13 @@ namespace BACnetPana.Core.ViewModels
                                     AddLog($"✅ TShark: {enrichedCount} BACnet-Pakete mit Details angereichert");
                                     var summary = $"┌── BACnet-Datenbasis ({BacnetDatabase.IpToInstance.Count} Geräte - TShark) ──┐";
                                     AddLog(summary);
+                                    IsPhase2Complete = true;
+                                    IsAnalysisReady = true;
+                                    IsLoading = false;
+                                    LoadProgress = 100;
+                                    Phase2Progress = 100;
+                                    Phase2Message = $"Phase 2: Abgeschlossen ✅ ({enrichedCount} Pakete)";
+                                    LoadingMessage = $"Fertig: {enrichedCount} BACnet-Pakete mit TShark analysiert";
                                 }, null);
                             }
                             else if (enrichedCount > 0)
@@ -201,6 +261,13 @@ namespace BACnetPana.Core.ViewModels
                                 _synchronizationContext.Post(_ =>
                                 {
                                     AddLog($"✅ TShark: {enrichedCount} BACnet-Pakete mit Details angereichert (keine Geräte identifiziert)");
+                                    IsPhase2Complete = true;
+                                    IsAnalysisReady = true;
+                                    IsLoading = false;
+                                    LoadProgress = 100;
+                                    Phase2Progress = 100;
+                                    Phase2Message = $"Phase 2: Abgeschlossen ✅ ({enrichedCount} Pakete)";
+                                    LoadingMessage = $"Fertig: {enrichedCount} BACnet-Pakete mit TShark analysiert";
                                 }, null);
                             }
                             else
@@ -208,6 +275,13 @@ namespace BACnetPana.Core.ViewModels
                                 _synchronizationContext.Post(_ =>
                                 {
                                     AddLog($"⚠️  TShark: Keine BACnet-Details extrahiert");
+                                    IsPhase2Complete = true;
+                                    IsAnalysisReady = true;
+                                    IsLoading = false;
+                                    LoadProgress = 100;
+                                    Phase2Progress = 100;
+                                    Phase2Message = "Phase 2: Keine Details extrahiert";
+                                    LoadingMessage = "Fertig: TShark-Analyse abgeschlossen (keine Details)";
                                 }, null);
                             }
                         }
@@ -216,6 +290,13 @@ namespace BACnetPana.Core.ViewModels
                             _synchronizationContext.Post(_ =>
                             {
                                 AddLog($"⚠️  TShark-Analyse fehlgeschlagen: {ex.Message}");
+                                IsPhase2Complete = true;
+                                IsAnalysisReady = true;
+                                IsLoading = false;
+                                LoadProgress = 100;
+                                Phase2Progress = 100;
+                                Phase2Message = "Phase 2: Fehlgeschlagen ⚠️";
+                                LoadingMessage = "Fertig: TShark-Analyse fehlgeschlagen";
                             }, null);
                         }
                     });
@@ -233,17 +314,18 @@ namespace BACnetPana.Core.ViewModels
                     {
                         AddLog($"BACnet-Datenbasis: Keine BACnet-Geräte gefunden");
                     }
+                    IsPhase2Complete = true;
+                    IsAnalysisReady = true;
+                    IsLoading = false;
+                    Phase2Message = "Phase 2: Nicht verfügbar (TShark fehlt)";
+                    Phase2Progress = 0;
+                    LoadingMessage = $"Fertig: {completePackets.Count} Pakete geladen";
                 }
                 // Wenn TShark aktiv ist, werden die Ergebnisse asynchron in Phase 2 ausgegeben
-
-                LoadingMessage = $"Fertig: {completePackets.Count} Pakete geladen";
             }
             catch (Exception ex)
             {
                 AddLog($"FEHLER: {ex.Message}");
-            }
-            finally
-            {
                 IsLoading = false;
             }
         }
@@ -265,6 +347,7 @@ namespace BACnetPana.Core.ViewModels
         private void OnProgressChanged(object? sender, string message)
         {
             LoadingMessage = message;
+            Phase1Message = message;
             AddLog(message);
 
             // Versuche Progress-Prozentsatz aus der Nachricht zu extrahieren (z.B. "Gelesen: 50000 von 100000 Paketen (50%)")
@@ -279,11 +362,61 @@ namespace BACnetPana.Core.ViewModels
                         string percentStr = message.Substring(percentStart + 1, percentEnd - percentStart - 1);
                         if (int.TryParse(percentStr, out int percent))
                         {
-                            LoadProgress = Math.Min(100, percent); // Max 100%
+                            Phase1Progress = Math.Min(100, percent); // Max 100%
+                            LoadProgress = Math.Min(100, percent);
                         }
                     }
                 }
                 catch { }
+            }
+        }
+
+        private void OnPhase2ProgressChanged(object? sender, string message)
+        {
+            AddLog($"Phase 2: {message}");
+
+            // Verarbeite verschiedene TShark-Meldungen
+            if (message.StartsWith("Verarbeitet:"))
+            {
+                // "Verarbeitet: 5000 Pakete" → extrahiere Anzahl
+                try
+                {
+                    var parts = message.Split(' ');
+                    if (parts.Length >= 2 && int.TryParse(parts[1], out int count))
+                    {
+                        Phase2Message = $"Phase 2: Gelesen: {count:N0} Pakete";
+                        // Schätze Fortschritt basierend auf Paketzahl (maximal 90%)
+                        Phase2Progress = Math.Min(90, (count / 1000) * 2); // Jedes 1000 Pakete = 2%
+                    }
+                }
+                catch { }
+            }
+            else if (message.StartsWith("Fertig:"))
+            {
+                // "Fertig: 12345 Pakete gelesen"
+                try
+                {
+                    var parts = message.Split(' ');
+                    if (parts.Length >= 2 && int.TryParse(parts[1], out int count))
+                    {
+                        Phase2Message = $"Phase 2: {count:N0} Pakete gelesen";
+                        Phase2Progress = 95;
+                    }
+                }
+                catch { }
+            }
+            else if (message.StartsWith("Starte"))
+            {
+                Phase2Message = "Phase 2: Lese Pakete ...";
+            }
+            else if (message.StartsWith("Parse"))
+            {
+                // Parse JSON-Daten entfällt - wird nicht angezeigt
+                Phase2Message = "Phase 2: Lese Pakete ...";
+            }
+            else if (message.Contains("TShark") || message.Contains("JSON"))
+            {
+                Phase2Message = "Phase 2: Lese Pakete ...";
             }
         }
 
