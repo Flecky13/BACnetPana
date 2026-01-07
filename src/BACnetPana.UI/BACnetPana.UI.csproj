@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+
+    <PackageReference Include="OxyPlot.Wpf" Version="2.1.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BACnetPana.Core\BACnetPana.Core.csproj" />
+    <ProjectReference Include="..\BACnetPana.Models\BACnetPana.Models.csproj" />
+    <ProjectReference Include="..\BACnetPana.DataAccess\BACnetPana.DataAccess.csproj" />
+  </ItemGroup>
+
+</Project>
