@@ -15,6 +15,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="..\..\icons\toolicon.ico">
+      <Link>icons\toolicon.ico</Link>
+    </Resource>
+    <Resource Include="..\..\images\toolicon.png">
+      <Link>images\toolicon.png</Link>
+    </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\BACnetPana.Core\BACnetPana.Core.csproj" />
     <ProjectReference Include="..\BACnetPana.Models\BACnetPana.Models.csproj" />
     <ProjectReference Include="..\BACnetPana.DataAccess\BACnetPana.DataAccess.csproj" />

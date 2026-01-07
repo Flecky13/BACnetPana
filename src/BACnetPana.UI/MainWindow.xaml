@@ -4,7 +4,8 @@
         Title="BACnetPana - Netzwerk-Analyse" Height="900" Width="1400"
         Background="#F0F0F0"
         FontSize="12"
-        FontFamily="Segoe UI">
+        FontFamily="Segoe UI"
+        Icon="icons/toolicon.ico">
     <DockPanel LastChildFill="True">
         <!-- Toolbar + Progress -->
         <Grid DockPanel.Dock="Top" Background="#2D2D2D">
@@ -15,27 +16,30 @@
 
             <!-- Buttons -->
             <Grid Grid.Row="0" Height="80">
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10">
-                    <Button x:Name="OpenFileButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="200"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="10">
+                    <Image Source="images/toolicon.png" Width="60" Height="60" Margin="10,0,5,0" VerticalAlignment="Center"/>
+                    <Button x:Name="OpenFileButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="100"
                             Background="#0078D4" Foreground="White" FontSize="16"
                             Click="OpenFileButton_Click">
                         <TextBlock Text="📁 PCAP/PCAPNG öffnen" TextWrapping="NoWrap"/>
                     </Button>
-                    <Button x:Name="AnalysisButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="150"
+                    <Button x:Name="AnalysisButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="100"
                             Background="#107C10" Foreground="White" FontSize="16"
                             Click="AnalysisButton_Click"
-                            IsEnabled="{Binding IsAnalysisReady}">
+                            Visibility="{Binding IsAnalysisReady, Converter={StaticResource BooleanToVisibilityConverter}}">
                         <TextBlock Text="🔄 Analysieren" TextWrapping="NoWrap"/>
                     </Button>
-                    <Button Padding="15,10" Margin="5" MinHeight="50" MinWidth="150"
-                            Background="#E81123" Foreground="White" FontSize="16">
-                        <TextBlock Text="💾 Exportieren" TextWrapping="NoWrap"/>
-                    </Button>
-                    <Button x:Name="WiresharkInfoButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="150"
-                            Background="#FF8C00" Foreground="White" FontSize="16"
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="10">
+                    <Button x:Name="HelpButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="100"
+                            Background="#6264A7" Foreground="White" FontSize="16"
                             Click="WiresharkInfoButton_Click"
                             ToolTip="Informationen zur Wireshark/TShark Installation">
-                        <TextBlock Text="ℹ️ Wireshark" TextWrapping="NoWrap"/>
+                        <TextBlock Text="❓ Hilfe" TextWrapping="NoWrap"/>
                     </Button>
                 </StackPanel>
             </Grid>
