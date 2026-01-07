@@ -57,7 +57,7 @@ tshark --version
 ### 3. Anwendung starten
 ```bash
 dotnet run --project src/BACnetAna.UI
-# Oder öffnen Sie BACnetAna.sln in Visual Studio
+# Oder öffnen Sie BACnetPana.sln in Visual Studio
 ```
 
 ### 4. Status überprüfen
@@ -85,31 +85,31 @@ dotnet run --project src/BACnetAna.UI
 ## 🏗️ Projektstruktur
 
 ```
-BACnetAna/
-├── BACnetAna.sln                          # Visual Studio Solution
+BACnetPana/
+├── BACnetPana.sln                          # Visual Studio Solution
 ├── README.md                              # Diese Datei
 ├── docs/
 │   ├── TSHARK_INTEGRATION.md              # TShark-Dokumentation
 │   └── MIGRATION_NOTES.md                 # Änderungsnotizen
 └── src/
-    ├── BACnetAna.Models/                  # Datenmodelle
+    ├── BACnetPana.Models/                  # Datenmodelle
     │   ├── NetworkPacket.cs               # Paket-Datenstruktur
     │   ├── PacketStatistics.cs            # Statistik-Modell
     │   ├── BACnetDatabase.cs              # BACnet-Gerätedatenbank
     │   └── ProtocolInfo.cs                # Protokoll-Informationen
     │
-    ├── BACnetAna.DataAccess/              # Datenschicht
+    ├── BACnetPana.DataAccess/              # Datenschicht
     │   ├── TSharkBACnetParser.cs          # TShark-basierter Parser (empfohlen)
     │   ├── PcapFileReader.cs              # SharpPcap-Parser (Fallback)
     │   ├── PcapParserFactory.cs           # Automatische Parser-Auswahl
     │   └── StatisticsCalculator.cs        # Statistik-Berechnung
     │
-    ├── BACnetAna.Core/                    # Geschäftslogik / ViewModels
+    ├── BACnetPana.Core/                    # Geschäftslogik / ViewModels
     │   └── ViewModels/
     │       ├── MainViewModel.cs           # Haupt-ViewModel (MVVM)
     │       └── StatisticsViewModel.cs     # Statistik-ViewModel
     │
-    └── BACnetAna.UI/                      # WPF-Benutzeroberfläche
+    └── BACnetPana.UI/                      # WPF-Benutzeroberfläche
         ├── MainWindow.xaml                # Hauptfenster (XAML)
         ├── MainWindow.xaml.cs             # Code-Behind
         ├── AnalysisWindow.xaml            # Analyse-Fenster
@@ -141,7 +141,7 @@ BACnetAna/
 ### Projekt öffnen
 ```bash
 # Projekt klonen/öffnen
-cd d:\github\BACnetAna
+cd d:\github\VisualStudio\BACnetPana
 
 # Bauen
 dotnet build
@@ -302,9 +302,9 @@ Statistics → ViewModel → XAML Bindings → Charts/Labels
 
 ---
 
-## 📚 Basis-Architektur (Original-Software vs. BACnetAna)
+## 📚 Basis-Architektur (Original-Software vs. BACnetPana)
 
-| Aspekt | Original Visual_BACnet | BACnetAna |
+| Aspekt | Original Visual_BACnet | BACnetPana |
 |--------|-----|---------|
 | **Sprache** | Python + JavaScript | C# |
 | **GUI-Framework** | Electron | WPF |
@@ -321,15 +321,15 @@ Statistics → ViewModel → XAML Bindings → Charts/Labels
 Alle NuGet-Pakete werden automatisch durch `dotnet restore` installiert:
 
 ```xml
-<!-- BACnetAna.UI -->
+<!-- BACnetPana.UI -->
 <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
 <PackageReference Include="OxyPlot.Wpf" Version="2.1.2" />
 
-<!-- BACnetAna.DataAccess -->
+<!-- BACnetPana.DataAccess -->
 <PackageReference Include="SharpPcap" Version="6.3.1" />
 <PackageReference Include="PacketDotNet" Version="1.4.8" />
 
-<!-- BACnetAna.Core -->
+<!-- BACnetPana.Core -->
 <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
 ```
 
@@ -338,12 +338,12 @@ Alle NuGet-Pakete werden automatisch durch `dotnet restore` installiert:
 ## 💡 Tipps für Erweiterung
 
 ### Neues ViewModel hinzufügen
-1. Erstelle `class MyViewModel : ObservableObject` in `BACnetAna.Core/ViewModels/`
+1. Erstelle `class MyViewModel : ObservableObject` in `BACnetPana.Core/ViewModels/`
 2. Nutze `[ObservableProperty]` Attribute für automatische Property-Generierung
 3. Verwende `[RelayCommand]` für Commands
 
 ### Neues Fenster/Control hinzufügen
-1. Erstelle `MyWindow.xaml` + `MyWindow.xaml.cs` in `BACnetAna.UI/`
+1. Erstelle `MyWindow.xaml` + `MyWindow.xaml.cs` in `BACnetPana.UI/`
 2. Setze `DataContext = new MyViewModel();` im Code-Behind
 3. Binde Properties über `{Binding PropertyName}` in XAML
 
@@ -377,6 +377,6 @@ Nicht spezifiziert (zu definieren basierend auf Original-Projekt)
 ---
 
 **Erstellt:** Januar 2026
-**Projektname:** BACnetAna
+**Projektname:** BACnetPana
 **Entwickelt für:** Netzwerk-Paketanalyse & Visualisierung
 **Status:** ✅ Produktiv (Core-Funktionalität)

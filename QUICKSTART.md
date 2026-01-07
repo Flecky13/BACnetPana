@@ -1,4 +1,4 @@
-# 🚀 Quick Start Guide - BACnetAna
+# 🚀 Quick Start Guide - BACnetPana
 
 ## Wireshark/TShark erforderlich?
 
@@ -142,7 +142,7 @@ Datei → PCAP/PCAPNG öffnen
 
 ```bash
 # Starten Sie die Anwendung
-dotnet run --project src/BACnetAna.UI
+dotnet run --project src/BACnetPana.UI
 
 # Log zeigt:
 ⚠️  HINWEIS: TShark (Wireshark) nicht gefunden

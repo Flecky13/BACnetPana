@@ -85,7 +85,7 @@ namespace BACnetPana.DataAccess
     public interface IPcapParser
     {
         event EventHandler<string>? ProgressChanged;
-        BACnetAna.Models.BACnetDatabase BACnetDb { get; }
-        System.Threading.Tasks.Task<System.Collections.Generic.List<BACnetAna.Models.NetworkPacket>> ReadPcapFileAsync(string filePath);
+        BACnetPana.Models.BACnetDatabase BACnetDb { get; }
+        System.Threading.Tasks.Task<System.Collections.Generic.List<BACnetPana.Models.NetworkPacket>> ReadPcapFileAsync(string filePath);
     }
 }
