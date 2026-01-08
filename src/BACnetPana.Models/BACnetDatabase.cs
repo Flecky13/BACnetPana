@@ -27,6 +27,9 @@ namespace BACnetPana.Models
         private int _bacnetBySourcePort = 0;
         private int _packetsWithDetails = 0;
 
+        // TCP-Analysemetriken
+        public TcpAnalysisMetrics TcpMetrics { get; } = new TcpAnalysisMetrics();
+
         /// <summary>
         /// Extrahiert BACnet-Instanznummer aus typischen Feldern wie
         /// "device,12345", "device 12345" oder beliebigen Strings mit Zahlen
@@ -137,6 +140,60 @@ namespace BACnetPana.Models
             {
                 if (!IpToVendorId.ContainsKey(sourceIp))
                     IpToVendorId[sourceIp] = vendorIdCandidate;
+            }
+        }
+
+        /// <summary>
+        /// Verarbeitet allgemeine TCP/ICMP Felder für Verlustmetriken.
+        /// Wird beim Einlesen jedes Pakets aufgerufen.
+        /// </summary>
+        public void ProcessTcpFields(NetworkPacket packet)
+        {
+            if (packet == null)
+                return;
+
+            // Zähle Gesamtzahl TCP-Pakete
+            if (string.Equals(packet.Protocol, "TCP", StringComparison.OrdinalIgnoreCase))
+            {
+                TcpMetrics.TotalTcpPackets++;
+            }
+
+            // ICMP Destination Unreachable
+            if (string.Equals(packet.Protocol, "ICMP", StringComparison.OrdinalIgnoreCase) && packet.Details != null)
+            {
+                if (packet.Details.TryGetValue("ICMP Type", out var icmpType))
+                {
+                    // TShark/PacketDotNet liefern oft z.B. "DestinationUnreachable" oder Code 3
+                    if (!string.IsNullOrEmpty(icmpType))
+                    {
+                        var lower = icmpType.ToLowerInvariant();
+                        if (lower.Contains("unreachable") || lower.Contains("destination unreachable") || lower.Contains("type=3"))
+                        {
+                            TcpMetrics.IcmpUnreachable++;
+                        }
+                    }
+                }
+            }
+
+            // TCP-spezifische Fehlerindikatoren aus Details
+            if (packet.Details != null)
+            {
+                foreach (var kv in packet.Details)
+                {
+                    var key = (kv.Key ?? string.Empty).ToLowerInvariant();
+                    var val = (kv.Value ?? string.Empty).ToLowerInvariant();
+
+                    if (key.Contains("retransmission") || val.Contains("retransmission"))
+                        TcpMetrics.Retransmissions++;
+                    else if ((key.Contains("fast") && key.Contains("retransmission")) || (val.Contains("fast") && val.Contains("retransmission")))
+                        TcpMetrics.FastRetransmissions++;
+                    else if ((key.Contains("duplicate") && key.Contains("ack")) || (val.Contains("duplicate") && val.Contains("ack")))
+                        TcpMetrics.DuplicateAcks++;
+                    else if (key.Contains("reset") || val.Contains("reset") || (val.Contains("rst") && key.Contains("tcp flags")))
+                        TcpMetrics.Resets++;
+                    else if (key.Contains("lost_segment") || val.Contains("lost segment") || key.Contains("tcp lost segment") || val.Contains("tcp lost segment"))
+                        TcpMetrics.LostSegments++;
+                }
             }
         }
 

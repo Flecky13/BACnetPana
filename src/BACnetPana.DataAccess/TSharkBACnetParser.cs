@@ -141,6 +141,17 @@ namespace BACnetPana.DataAccess
                     "-e udp.dstport " +
                     "-e tcp.srcport " +
                     "-e tcp.dstport " +
+                    // TCP Analyse Felder
+                    "-e tcp.seq " +
+                    "-e tcp.ack " +
+                    "-e tcp.flags.reset " +
+                    "-e tcp.analysis.retransmission " +
+                    "-e tcp.analysis.fast_retransmission " +
+                    "-e tcp.analysis.duplicate_ack " +
+                    "-e tcp.analysis.lost_segment " +
+                    // ICMP Felder
+                    "-e icmp.type " +
+                    "-e icmp.code " +
                     "-e bacnet " +
                     "-e bacapp.type " +
                     "-e bacapp.confirmed_service " +
@@ -290,11 +301,56 @@ namespace BACnetPana.DataAccess
             packet.SourcePort = srcPort;
             packet.DestinationPort = dstPort;
 
+            // TCP Sequenz & ACK
+            var tcpSeq = GetStringField(layers, "tcp.seq");
+            if (!string.IsNullOrEmpty(tcpSeq))
+                packet.Details["Sequence"] = tcpSeq;
+            var tcpAck = GetStringField(layers, "tcp.ack");
+            if (!string.IsNullOrEmpty(tcpAck))
+                packet.Details["Acknowledgment"] = tcpAck;
+
+            // TCP Reset Flag
+            var tcpReset = GetStringField(layers, "tcp.flags.reset");
+            if (!string.IsNullOrEmpty(tcpReset))
+            {
+                if (tcpReset == "1" || tcpReset.Equals("true", StringComparison.OrdinalIgnoreCase))
+                    packet.Details["TCP Reset"] = "true";
+            }
+
+            // TCP Analyse: Retransmission, Fast Retransmission, Duplicate ACK
+            if (TryGetStringField(layers, "tcp.analysis.retransmission", out string? retr))
+            {
+                packet.Details["TCP Retransmission"] = string.IsNullOrEmpty(retr) ? "true" : retr;
+            }
+            if (TryGetStringField(layers, "tcp.analysis.fast_retransmission", out string? fretr))
+            {
+                packet.Details["TCP Fast Retransmission"] = string.IsNullOrEmpty(fretr) ? "true" : fretr;
+            }
+            if (TryGetStringField(layers, "tcp.analysis.duplicate_ack", out string? dack))
+            {
+                packet.Details["TCP Duplicate ACK"] = string.IsNullOrEmpty(dack) ? "true" : dack;
+            }
+            if (TryGetStringField(layers, "tcp.analysis.lost_segment", out string? lost))
+            {
+                packet.Details["TCP Lost Segment"] = string.IsNullOrEmpty(lost) ? "true" : lost;
+            }
+
+            // ICMP Typ/Code
+            var icmpType = GetStringField(layers, "icmp.type");
+            var icmpCode = GetStringField(layers, "icmp.code");
+            if (!string.IsNullOrEmpty(icmpType))
+                packet.Details["ICMP Type"] = icmpType;
+            if (!string.IsNullOrEmpty(icmpCode))
+                packet.Details["ICMP Code"] = icmpCode;
+
             // BACnet Erkennung und Details
             ParseBACnetDetails(layers, packet);
 
             // Summary erstellen
             packet.Summary = CreateSummary(packet);
+
+            // TCP/ICMP Felder in Datenbankmetrik aufnehmen
+            BACnetDb.ProcessTcpFields(packet);
 
             return packet;
         }

@@ -68,6 +68,7 @@ namespace BACnetPana.DataAccess
 
                             // Verarbeite BACnet-Informationen während des Einlesens
                             BACnetDb.ProcessPacket(networkPacket);
+                            BACnetDb.ProcessTcpFields(networkPacket);
 
                             PacketRead?.Invoke(this, new PacketReadEventArgs { Packet = networkPacket, TotalPackets = packetCount });
 

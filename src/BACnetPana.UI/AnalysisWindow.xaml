@@ -153,7 +153,7 @@
                             </Border>
 
                             <!-- TCP Analysis Section -->
-                            <Border x:Name="TcpAnalysisBorder" Background="White" BorderBrush="#FFC107" BorderThickness="2" Padding="15" Margin="0,0,0,8" MinHeight="160" Visibility="Collapsed">
+                            <Border x:Name="TcpAnalysisBorder" Background="White" BorderBrush="#FFC107" BorderThickness="2" Padding="15" Margin="0,0,0,8" MinHeight="180" Visibility="Collapsed">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -164,25 +164,60 @@
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
-                                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Text="⚠️ TCP-Analyse (Probleme)" FontWeight="Bold" FontSize="13" Margin="0,0,0,8" Foreground="#D13438"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Text="⚠️ TCP-Analyse (Probleme)" FontWeight="Bold" FontSize="13" Margin="0,0,0,20" />
+                                    <!-- Gesamtverlust-Ampel (rechts, gleiche Zeile) -->
+                                    <StackPanel Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Margin="6,0,0,20" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Ellipse x:Name="TcpLossOverallIndicator" Width="16" Height="16" Fill="#4CAF50" Stroke="#666" StrokeThickness="1" Margin="0,0,8,0"/>
+                                            <TextBlock Text="Gesamtverlust:" FontSize="20" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpLossOverallLabel" Text="0 (0.00 %)" FontSize="20" FontWeight="Bold" Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <!-- Grid 2 -->
+                                    <StackPanel Grid.Row="2" Grid.Column="0" Margin="6,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                            <Ellipse x:Name="TcpRetransmissionIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
+                                            <TextBlock Text="TcpRetransmission:" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpRetransmissionLabel" Text="0"  Foreground="#333" FontWeight="Bold" Margin="12,0,0,0"/>
+                                        </StackPanel>
+                                        
+                                    </StackPanel>
 
-                                    <StackPanel Grid.Row="1" Grid.Column="0" Margin="6,0">
-                                        <TextBlock Text="Neuübertragungen:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="TcpRetransmissionLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
+                                    <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                            <Ellipse x:Name="TcpFastRetransmissionIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
+                                            <TextBlock Text="TcpFastRetransmission:" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpFastRetransmissionLabel" Text="0" Foreground="#333" FontWeight="Bold" Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                     </StackPanel>
+
+                                    <StackPanel Grid.Row="2" Grid.Column="2" Margin="6,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                            <Ellipse x:Name="TcpDuplicateAckIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
+                                            <TextBlock Text="TcpDuplicateAck:" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpDuplicateAckLabel" Text="0" Foreground="#333" FontWeight="Bold" Margin="8,0,0,0"/>
+                                        </StackPanel>
                                     </StackPanel>
-                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0">
-                                        <TextBlock Text="Doppelte ACKs:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="TcpDuplicateAckLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
+
+                                    <StackPanel Grid.Row="2" Grid.Column="3" Margin="6,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                            <Ellipse x:Name="TcpResetIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Tcp Reset-Flags:" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpResetLabel" Text="0" Foreground="#333" FontWeight="Bold" Margin="8,0,0,0"/>
+                                        </StackPanel>
                                     </StackPanel>
-                                    <StackPanel Grid.Row="1" Grid.Column="2" Margin="6,0">
-                                        <TextBlock Text="Schnelle Neuübertragungen:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="TcpFastRetransmissionLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Row="1" Grid.Column="3" Margin="6,0">
-                                        <TextBlock Text="Reset-Flags:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="TcpResetLabel" Text="0" FontSize="16" Foreground="#D13438" FontWeight="Bold"/>
+
+                                    <!-- Grid 3 -->
+                                    <StackPanel Grid.Row="3" Grid.Column="0" Margin="6,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                            <Ellipse x:Name="TcpLostSegmentIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
+                                            <TextBlock Text="TcpLostSegment:" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpLostSegmentLabel" Text="0" Foreground="#333" FontWeight="Bold" Margin="8,0,0,0"/>
+                                        </StackPanel>
                                     </StackPanel>
                                 </Grid>
                             </Border>

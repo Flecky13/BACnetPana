@@ -384,6 +384,8 @@ namespace BACnetPana.UI
             var duplicateAckCount = 0;
             var fastRetransmissionCount = 0;
             var resetCount = 0;
+            var icmpUnreachableCount = 0;
+            var lostSegmentCount = 0;
 
             foreach (var packet in tcpPackets)
             {
@@ -402,7 +404,21 @@ namespace BACnetPana.UI
                             fastRetransmissionCount++;
                         else if (key.Contains("reset") || value.Contains("reset"))
                             resetCount++;
+                        else if (key.Contains("lost_segment") || value.Contains("lost segment") || key.Contains("tcp lost segment") || value.Contains("tcp lost segment"))
+                            lostSegmentCount++;
                     }
+                }
+            }
+
+            // ICMP Destination Unreachable innerhalb der Zeitspanne erfassen
+            var icmpPackets = filteredPackets.Where(p => p.Protocol?.ToUpper() == "ICMP" && p.Details != null).ToList();
+            foreach (var ipkt in icmpPackets)
+            {
+                if (ipkt.Details.TryGetValue("ICMP Type", out var t))
+                {
+                    var lower = (t ?? string.Empty).ToLowerInvariant();
+                    if (lower.Contains("unreachable") || lower.Contains("destination unreachable") || lower.Contains("type=3") || lower == "3")
+                        icmpUnreachableCount++;
                 }
             }
 
@@ -415,6 +431,39 @@ namespace BACnetPana.UI
                 TcpFastRetransmissionLabel.Text = fastRetransmissionCount.ToString();
             if (TcpResetLabel != null)
                 TcpResetLabel.Text = resetCount.ToString();
+            if (TcpLostSegmentLabel != null)
+                TcpLostSegmentLabel.Text = lostSegmentCount.ToString();
+
+            // Ampel-Farben basierend auf Prozentanteil
+            double totalTcp = Math.Max(1, tcpPackets.Count);
+            SetAmpel(TcpRetransmissionIndicator, retransmissionCount * 100.0 / totalTcp);
+            SetAmpel(TcpDuplicateAckIndicator, duplicateAckCount * 100.0 / totalTcp);
+            SetAmpel(TcpFastRetransmissionIndicator, fastRetransmissionCount * 100.0 / totalTcp);
+            SetAmpel(TcpResetIndicator, resetCount * 100.0 / totalTcp);
+            SetAmpel(TcpLostSegmentIndicator, lostSegmentCount * 100.0 / totalTcp);
+
+            // Gesamtverlust: Summe relevanter Ereignisse (ohne Resets)
+            var lossEventsTotal = retransmissionCount + duplicateAckCount + fastRetransmissionCount + icmpUnreachableCount + resetCount + lostSegmentCount;
+            var lossPercent = lossEventsTotal * 100.0 / totalTcp;
+            if (TcpLossOverallLabel != null)
+                TcpLossOverallLabel.Text = $"{lossEventsTotal} ({lossPercent:F2} %)";
+            SetAmpel(TcpLossOverallIndicator, lossPercent);
+        }
+
+        private void SetAmpel(System.Windows.Shapes.Ellipse? indicator, double percent)
+        {
+            if (indicator == null)
+                return;
+            var brush = GetAmpelBrush(percent);
+            indicator.Fill = brush;
+        }
+
+        private Brush GetAmpelBrush(double percent)
+        {
+            // 🟢 Grün < 1%, 🟡 Gelb 1–3%, 🔴 Rot > 3%
+            if (percent < 1.0) return new SolidColorBrush(Color.FromRgb(0x4C, 0xAF, 0x50)); // Grün
+            if (percent <= 3.0) return new SolidColorBrush(Color.FromRgb(0xFF, 0xC1, 0x07)); // Gelb
+            return new SolidColorBrush(Color.FromRgb(0xD1, 0x34, 0x38)); // Rot
         }
 
         private void UpdateBACnetAnalysis(List<NetworkPacket> filteredPackets)
