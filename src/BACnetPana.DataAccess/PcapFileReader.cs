@@ -21,12 +21,12 @@ namespace BACnetPana.DataAccess
         // BACnet-Datenbasis wird während des Einlesens aufgebaut
         public BACnetDatabase BACnetDb { get; private set; } = new BACnetDatabase();
 
-        public async Task<List<NetworkPacket>> ReadPcapFileAsync(string filePath)
+        public async Task<List<NetworkPacket>> ReadPcapFileAsync(string filePath, CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() => ReadPcapFile(filePath));
+            return await Task.Run(() => ReadPcapFile(filePath, cancellationToken), cancellationToken);
         }
 
-        public List<NetworkPacket> ReadPcapFile(string filePath)
+        public List<NetworkPacket> ReadPcapFile(string filePath, CancellationToken cancellationToken = default)
         {
             var packets = new List<NetworkPacket>();
             BACnetDb = new BACnetDatabase(); // Reset bei jedem neuen File
@@ -53,6 +53,10 @@ namespace BACnetPana.DataAccess
 
                 while (device.GetNextPacket(out capture) == GetPacketStatus.PacketRead)
                 {
+                    // Prüfe Abbruch alle 5000 Pakete
+                    if (packetCount % 5000 == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
+
                     packetCount++;
 
                     try

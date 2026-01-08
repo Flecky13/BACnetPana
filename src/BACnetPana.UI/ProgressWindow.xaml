@@ -1,0 +1,39 @@
+<Window x:Class="BACnetPana.UI.ProgressWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Import läuft..."
+        Height="247"
+        Width="502"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        WindowStyle="SingleBorderWindow"
+        ShowInTaskbar="False">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Phase Info (z.B. "Phase 1/2") -->
+        <TextBlock Grid.Row="0" x:Name="PhaseInfoLabel" Text="Phase 1/2" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+
+        <!-- Aktueller Vorgang (z.B. "Lese Pakete mit SharpPcap...") -->
+        <TextBlock Grid.Row="1" x:Name="CurrentOperationLabel" Text="Lese Pakete..." FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+
+        <!-- Progressbar -->
+        <ProgressBar Grid.Row="2" x:Name="ProgressBar" Height="24" Minimum="0" Maximum="100" Value="0" Margin="0,0,0,12"/>
+
+        <!-- Prozent-Anzeige -->
+        <TextBlock Grid.Row="3" x:Name="ProgressPercentLabel" Text="0 %" FontSize="12" HorizontalAlignment="Center" Margin="0,0,0,12"/>
+
+        <!-- Spacer -->
+        <Border Grid.Row="4"/>
+
+        <!-- Abbrechen Button -->
+        <Button Grid.Row="5" x:Name="CancelButton" Content="Abbrechen" Width="120" Height="32" Click="CancelButton_Click" HorizontalAlignment="Center"/>
+    </Grid>
+</Window>

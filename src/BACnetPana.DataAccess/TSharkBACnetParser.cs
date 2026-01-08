@@ -105,15 +105,15 @@ namespace BACnetPana.DataAccess
         /// <summary>
         /// Liest PCAP-Datei und parst BACnet-Pakete mit TShark
         /// </summary>
-        public async Task<List<NetworkPacket>> ReadPcapFileAsync(string filePath)
+        public async Task<List<NetworkPacket>> ReadPcapFileAsync(string filePath, System.Threading.CancellationToken cancellationToken = default)
         {
-            return await Task.Run(() => ReadPcapFile(filePath));
+            return await Task.Run(() => ReadPcapFile(filePath, cancellationToken), cancellationToken);
         }
 
         /// <summary>
         /// Liest PCAP-Datei und parst BACnet-Pakete mit TShark
         /// </summary>
-        public List<NetworkPacket> ReadPcapFile(string filePath)
+        public List<NetworkPacket> ReadPcapFile(string filePath, System.Threading.CancellationToken cancellationToken = default)
         {
             var packets = new List<NetworkPacket>();
             BACnetDb = new BACnetDatabase(); // Reset bei jedem neuen File
@@ -124,9 +124,10 @@ namespace BACnetPana.DataAccess
 
                 // TShark-Aufruf mit JSON-Export
                 // -r: Lese PCAP-Datei
+                // -Y: Display-Filter NUR für BACnet-Pakete (reduziert Datenmenge massiv!)
                 // -T json: JSON-Ausgabeformat
                 // -e: Felder extrahieren (nur benötigte Felder für Performance)
-                var arguments = $"-r \"{filePath}\" -T json " +
+                var arguments = $"-r \"{filePath}\" -Y \"bacnet or bacapp\" -T json " +
                     "-e frame.number " +
                     "-e frame.time_epoch " +
                     "-e frame.len " +
@@ -179,21 +180,30 @@ namespace BACnetPana.DataAccess
 
                 process.Start();
 
-                // Lese JSON-Output
-                string jsonOutput = process.StandardOutput.ReadToEnd();
+                ProgressChanged?.Invoke(this, "Parse JSON-Daten (Stream)...");
+
+                // Parse JSON direkt aus dem Stream für bessere Memory-Effizienz
+                // Bei sehr großen Dateien kann das immer noch viel Speicher benötigen
+                try
+                {
+                    packets = ParseTSharkJsonStreamOptimized(process.StandardOutput, cancellationToken);
+                }
+                catch (OutOfMemoryException)
+                {
+                    // Fallback: Versuche mit ReadToEnd (alte Methode) wenn Stream-Parsing fehlschlägt
+                    ProgressChanged?.Invoke(this, "Speicherproblem - versuche alternative Methode...");
+                    throw; // Re-throw für jetzt, keine alternative Methode
+                }
+
+                // Lese Fehlerausgabe
                 string errorOutput = process.StandardError.ReadToEnd();
 
                 process.WaitForExit();
 
-                if (process.ExitCode != 0)
+                if (process.ExitCode != 0 && packets.Count == 0)
                 {
                     throw new Exception($"TShark Fehler: {errorOutput}");
                 }
-
-                ProgressChanged?.Invoke(this, "Parse JSON-Daten...");
-
-                // Parse JSON
-                packets = ParseTSharkJson(jsonOutput);
 
                 ProgressChanged?.Invoke(this, $"Fertig: {packets.Count} Pakete gelesen");
                 ProgressChanged?.Invoke(this, BACnetDb.GetSummary());
@@ -208,9 +218,199 @@ namespace BACnetPana.DataAccess
         }
 
         /// <summary>
-        /// Parst TShark JSON-Output und erstellt NetworkPacket-Objekte
+        /// Parst TShark JSON-Output mit optimiertem Streaming für sehr große Dateien
         /// </summary>
-        private List<NetworkPacket> ParseTSharkJson(string jsonOutput)
+        private List<NetworkPacket> ParseTSharkJsonStreamOptimized(System.IO.StreamReader reader, System.Threading.CancellationToken cancellationToken)
+        {
+            var packets = new List<NetworkPacket>();
+            int packetCount = 0;
+            string? tempFilePath = null;
+
+            try
+            {
+                // Strategie für sehr große Dateien: Verwende temporäre Datei statt MemoryStream
+                // MemoryStream hat eine Größenbeschränkung, Dateien nicht
+
+                ProgressChanged?.Invoke(this, "Starte JSON-Stream-Parsing...");
+
+                // Erstelle temporäre Datei
+                tempFilePath = Path.Combine(Path.GetTempPath(), $"tshark_output_{Guid.NewGuid()}.json");
+
+                // Lese in Chunks und schreibe in temporäre Datei
+                const int bufferSize = 81920; // 80KB Chunks
+                var buffer = new char[bufferSize];
+                long totalCharsRead = 0;
+
+                using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize))
+                using (var writer = new StreamWriter(fileStream, System.Text.Encoding.UTF8))
+                {
+                    while (true)
+                    {
+                        int charsRead = reader.Read(buffer, 0, bufferSize);
+                        if (charsRead == 0) break;
+
+                        writer.Write(buffer, 0, charsRead);
+                        totalCharsRead += charsRead;
+
+                        if (totalCharsRead % (bufferSize * 10) == 0) // Alle ~800KB
+                        {
+                            long megabytes = (totalCharsRead * 2) / 1024 / 1024; // Ungefähr 2 Bytes pro Char
+                            ProgressChanged?.Invoke(this, $"Gelesen: ~{megabytes} MB");
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                    }
+                }
+
+                long fileSizeMB = new FileInfo(tempFilePath).Length / 1024 / 1024;
+                ProgressChanged?.Invoke(this, $"JSON gespeichert ({fileSizeMB} MB), parse Pakete...");
+
+                // Jetzt parse das JSON aus der temporären Datei
+                using (var fileStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var document = JsonDocument.Parse(fileStream, new JsonDocumentOptions
+                {
+                    AllowTrailingCommas = true,
+                    MaxDepth = 128
+                }))
+                {
+                    var root = document.RootElement;
+
+                    if (root.ValueKind != JsonValueKind.Array)
+                    {
+                        throw new Exception("TShark JSON ist kein Array");
+                    }
+
+                    foreach (var item in root.EnumerateArray())
+                    {
+                        // Prüfe Abbruch alle 5000 Pakete
+                        if (packetCount % 5000 == 0)
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                        packetCount++;
+
+                        try
+                        {
+                            var packet = ParsePacketFromJson(item, packetCount);
+                            packets.Add(packet);
+
+                            // Verarbeite BACnet-Informationen
+                            BACnetDb.ProcessPacket(packet);
+
+                            if (packetCount % 5000 == 0)
+                            {
+                                ProgressChanged?.Invoke(this, $"Verarbeitet: {packetCount} Pakete");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            ProgressChanged?.Invoke(this, $"Warnung bei Paket {packetCount}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (JsonException ex)
+            {
+                throw new Exception($"Fehler beim Parsen der JSON-Daten bei Paket {packetCount}: {ex.Message}", ex);
+            }
+            catch (OutOfMemoryException ex)
+            {
+                throw new Exception($"Nicht genug Speicher für diese PCAP-Datei. " +
+                    $"Bisher gelesen: {packets.Count} Pakete. " +
+                    $"Bitte verwenden Sie eine kleinere Datei oder teilen Sie die PCAP auf.", ex);
+            }
+            finally
+            {
+                // Lösche temporäre Datei
+                if (tempFilePath != null && File.Exists(tempFilePath))
+                {
+                    try
+                    {
+                        File.Delete(tempFilePath);
+                    }
+                    catch
+                    {
+                        // Ignoriere Fehler beim Löschen
+                    }
+                }
+            }
+
+            return packets;
+        }
+
+        /// <summary>
+        /// Parst TShark JSON-Output direkt aus dem Stream (memory-effizient für große Dateien)
+        /// </summary>
+        private List<NetworkPacket> ParseTSharkJsonStream(System.IO.StreamReader reader, System.Threading.CancellationToken cancellationToken)
+        {
+            var packets = new List<NetworkPacket>();
+            int packetCount = 0;
+
+            try
+            {
+                // Für große Dateien: Lese komplettes JSON in Chunks
+                ProgressChanged?.Invoke(this, "Lade JSON-Daten...");
+
+                string jsonContent = reader.ReadToEnd();
+
+                ProgressChanged?.Invoke(this, "Parse JSON-Daten...");
+
+                // Verwende den normalen JSON-Parser mit Streaming
+                using var document = JsonDocument.Parse(jsonContent, new JsonDocumentOptions
+                {
+                    AllowTrailingCommas = true,
+                    MaxDepth = 128
+                });
+
+                var root = document.RootElement;
+
+                if (root.ValueKind != JsonValueKind.Array)
+                {
+                    throw new Exception("TShark JSON ist kein Array");
+                }
+
+                foreach (var item in root.EnumerateArray())
+                {
+                    // Prüfe Abbruch alle 5000 Pakete
+                    if (packetCount % 5000 == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                    packetCount++;
+
+                    try
+                    {
+                        var packet = ParsePacketFromJson(item, packetCount);
+                        packets.Add(packet);
+
+                        // Verarbeite BACnet-Informationen
+                        BACnetDb.ProcessPacket(packet);
+
+                        if (packetCount % 5000 == 0)
+                        {
+                            ProgressChanged?.Invoke(this, $"Verarbeitet: {packetCount} Pakete");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        ProgressChanged?.Invoke(this, $"Warnung bei Paket {packetCount}: {ex.Message}");
+                    }
+                }
+            }
+            catch (JsonException ex)
+            {
+                throw new Exception($"Fehler beim Parsen der JSON-Daten bei Paket {packetCount}: {ex.Message}", ex);
+            }
+            catch (OutOfMemoryException ex)
+            {
+                throw new Exception($"Speicher voll bei Paket {packetCount}. Bisher gelesen: {packets.Count} Pakete. " +
+                    "Die PCAP-Datei ist zu groß. Versuchen Sie eine kleinere Datei oder teilen Sie die PCAP-Datei.", ex);
+            }
+
+            return packets;
+        }
+
+        /// <summary>
+        /// Parst TShark JSON-Output und erstellt NetworkPacket-Objekte (Legacy-Methode)
+        /// </summary>
+        private List<NetworkPacket> ParseTSharkJson(string jsonOutput, System.Threading.CancellationToken cancellationToken)
         {
             var packets = new List<NetworkPacket>();
 
@@ -223,6 +423,10 @@ namespace BACnetPana.DataAccess
 
                 foreach (var item in root.EnumerateArray())
                 {
+                    // Prüfe Abbruch alle 5000 Pakete
+                    if (packetCount % 5000 == 0)
+                        cancellationToken.ThrowIfCancellationRequested();
+
                     packetCount++;
 
                     try

@@ -46,7 +46,7 @@ namespace BACnetPana.UI
             }
         }
 
-        private void OpenFileButton_Click(object sender, RoutedEventArgs e)
+        private async void OpenFileButton_Click(object sender, RoutedEventArgs e)
         {
             var openFileDialog = new OpenFileDialog
             {
@@ -56,7 +56,73 @@ namespace BACnetPana.UI
 
             if (openFileDialog.ShowDialog() == true)
             {
-                _viewModel.OpenPcapFileCommand.Execute(openFileDialog.FileName);
+                var filePath = openFileDialog.FileName;
+
+                // Erstelle ProgressWindow
+                var progressWindow = new ProgressWindow
+                {
+                    Owner = this
+                };
+
+                // CancellationTokenSource für Abbruch
+                var cancellationTokenSource = new System.Threading.CancellationTokenSource();
+
+                // Progress-Callback
+                Action<string, string, int> progressCallback = (phase, operation, percent) =>
+                {
+                    progressWindow.UpdateProgress(phase, operation, percent);
+
+                    // Prüfe Abbruch
+                    if (progressWindow.IsCancelled)
+                    {
+                        cancellationTokenSource.Cancel();
+                    }
+                };
+
+                // Starte Import im Hintergrund
+                var importTask = System.Threading.Tasks.Task.Run(async () =>
+                {
+                    try
+                    {
+                        var result = await _viewModel.OpenPcapFileWithProgress(filePath, progressCallback, cancellationTokenSource.Token);
+
+                        if (result.HasValue)
+                        {
+                            // Update ObservableCollection auf UI-Thread
+                            await Dispatcher.InvokeAsync(() =>
+                            {
+                                _viewModel.Packets.Clear();
+                                foreach (var packet in result.Value.packets)
+                                {
+                                    _viewModel.Packets.Add(packet);
+                                }
+                                _viewModel.PacketStatistics = result.Value.statistics;
+                            });
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // Abbruch durch Benutzer
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            _viewModel.Packets.Clear();
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        await Dispatcher.InvokeAsync(() =>
+                        {
+                            MessageBox.Show($"Fehler beim Import:\n{ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                        });
+                    }
+                    finally
+                    {
+                        progressWindow.CloseWindow();
+                    }
+                });
+
+                // Zeige ProgressWindow modal
+                progressWindow.ShowDialog();
             }
         }
 
@@ -115,6 +181,121 @@ namespace BACnetPana.UI
             }
 
             MessageBox.Show(message, title, MessageBoxButton.OK, icon);
+        }
+
+        private async void SaveAnalysisButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Zähle BACnet-Pakete
+            int totalPackets = _viewModel.Packets.Count;
+            int bacnetPackets = _viewModel.Packets.Count(p =>
+                p.ApplicationProtocol == "BACnet" ||
+                p.DestinationPort == 47808 ||
+                p.SourcePort == 47808);
+
+            bool onlyBacnetPackets = true;
+
+            // Bei sehr vielen Paketen: Frage, ob nur BACnet gespeichert werden soll
+            if (totalPackets > 100000)
+            {
+                var choice = MessageBox.Show(
+                    $"⚠️ Sehr große Datenmenge!\n\n" +
+                    $"Gesamt: {totalPackets:N0} Pakete\n" +
+                    $"BACnet: {bacnetPackets:N0} Pakete\n\n" +
+                    $"Möchten Sie NUR BACnet-Pakete speichern?\n" +
+                    $"(Empfohlen für schnelles Speichern und kleinere Dateien)\n\n" +
+                    $"Ja = Nur BACnet ({bacnetPackets:N0})\n" +
+                    $"Nein = Alle Pakete ({totalPackets:N0})\n" +
+                    $"Abbrechen = Speichern abbrechen",
+                    "Speicheroption wählen",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
+
+                if (choice == MessageBoxResult.Cancel)
+                    return;
+
+                onlyBacnetPackets = (choice == MessageBoxResult.Yes);
+            }
+            else if (bacnetPackets > 0 && bacnetPackets < totalPackets)
+            {
+                // Bei kleineren Mengen: Frage trotzdem
+                var choice = MessageBox.Show(
+                    $"BACnet-Pakete: {bacnetPackets:N0} von {totalPackets:N0}\n\n" +
+                    $"Nur BACnet-Pakete speichern?\n" +
+                    $"(Kleinere Datei, schnelleres Speichern)",
+                    "Speicheroption",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
+
+                if (choice == MessageBoxResult.Cancel)
+                    return;
+
+                onlyBacnetPackets = (choice == MessageBoxResult.Yes);
+            }
+
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "BACnet Analyse (*.bpa)|*.bpa|Alle Dateien (*.*)|*.*",
+                Title = "Analyse speichern",
+                FileName = $"BACnet_Analyse_{DateTime.Now:yyyyMMdd_HHmmss}.bpa"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                bool success = await _viewModel.SaveAnalysisAsync(saveFileDialog.FileName, onlyBacnetPackets);
+
+                if (success)
+                {
+                    int savedCount = onlyBacnetPackets ? bacnetPackets : totalPackets;
+                    MessageBox.Show(
+                        $"Analyse erfolgreich gespeichert!\n\n" +
+                        $"Gespeicherte Pakete: {savedCount:N0}\n" +
+                        $"Datei: {System.IO.Path.GetFileName(saveFileDialog.FileName)}",
+                        "Gespeichert",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "Fehler beim Speichern der Analyse.\nDetails siehe Log.",
+                        "Fehler",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private async void LoadAnalysisButton_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "BACnet Analyse (*.bpa)|*.bpa|Alle Dateien (*.*)|*.*",
+                Title = "Analyse laden"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                bool success = await _viewModel.LoadAnalysisAsync(openFileDialog.FileName);
+
+                if (success)
+                {
+                    MessageBox.Show(
+                        $"Analyse erfolgreich geladen!\n\n" +
+                        $"Pakete: {_viewModel.Packets.Count:N0}\n" +
+                        $"Datei: {System.IO.Path.GetFileName(openFileDialog.FileName)}",
+                        "Geladen",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        "Fehler beim Laden der Analyse.\nDetails siehe Log.",
+                        "Fehler",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
         }
 
         private void AnalysisButton_Click(object sender, RoutedEventArgs e)

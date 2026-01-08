@@ -86,6 +86,6 @@ namespace BACnetPana.DataAccess
     {
         event EventHandler<string>? ProgressChanged;
         BACnetPana.Models.BACnetDatabase BACnetDb { get; }
-        System.Threading.Tasks.Task<System.Collections.Generic.List<BACnetPana.Models.NetworkPacket>> ReadPcapFileAsync(string filePath);
+        System.Threading.Tasks.Task<System.Collections.Generic.List<BACnetPana.Models.NetworkPacket>> ReadPcapFileAsync(string filePath, System.Threading.CancellationToken cancellationToken = default);
     }
 }
