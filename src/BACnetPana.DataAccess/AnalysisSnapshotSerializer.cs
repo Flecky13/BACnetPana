@@ -29,14 +29,14 @@ namespace BACnetPana.DataAccess
         public event EventHandler<(int current, int total)>? ProgressChanged;
 
         /// <summary>
-        /// Speichert einen Analysezustand (nur BACnet-Pakete + Statistiken)
-        /// Verwendet Streaming für große Datenmengen
+        /// Speichert einen Analysezustand (standardmäßig nur BACnet-Pakete + Statistiken)
+        /// Verwendet Streaming für große Datenmengen und filtert automatisch BACnet-Pakete
         /// </summary>
         public async Task SaveAsync(string filePath, AnalysisSnapshot snapshot, bool onlyBacnetPackets = true)
         {
             try
             {
-                // Filtere nur BACnet-Pakete wenn gewünscht (MASSIV schneller!)
+                // Filtere nur BACnet-Pakete (Standard-Verhalten für Speicherplatz-Optimierung)
                 var packetsToSave = snapshot.Packets;
                 if (onlyBacnetPackets && snapshot.Packets != null)
                 {
@@ -156,7 +156,7 @@ namespace BACnetPana.DataAccess
                 using var gzipStream = new GZipStream(fileStream, CompressionMode.Decompress);
 
                 // Lies JSON und deserialisiere
-                using var document = JsonDocument.Parse(gzipStream);
+                using var document = await JsonDocument.ParseAsync(gzipStream);
                 var root = document.RootElement;
 
                 var snapshot = new AnalysisSnapshot();
@@ -171,31 +171,138 @@ namespace BACnetPana.DataAccess
                 if (root.TryGetProperty("originalPcapFile", out var pcapEl))
                     snapshot.OriginalPcapFile = pcapEl.GetString();
 
-                // Statistiken
+                // Statistiken - Lade nur grundlegende Felder manuell um Overflow zu vermeiden
                 if (root.TryGetProperty("statistics", out var statsEl))
                 {
-                    snapshot.Statistics = JsonSerializer.Deserialize<PacketStatistics>(statsEl.GetRawText(), JsonOptions);
+                    try
+                    {
+                        var stats = new PacketStatistics();
+
+                        // Lade nur die kritischen Felder
+                        if (statsEl.TryGetProperty("totalPackets", out var totalPacketsEl))
+                            stats.TotalPackets = totalPacketsEl.GetInt32();
+
+                        if (statsEl.TryGetProperty("totalBytes", out var totalBytesEl))
+                            stats.TotalBytes = totalBytesEl.GetInt64();
+
+                        if (statsEl.TryGetProperty("startTime", out var startTimeEl) &&
+                            DateTime.TryParse(startTimeEl.GetString(), out var startTime))
+                            stats.StartTime = startTime;
+
+                        if (statsEl.TryGetProperty("endTime", out var endTimeEl) &&
+                            DateTime.TryParse(endTimeEl.GetString(), out var endTime))
+                            stats.EndTime = endTime;
+
+                        // Versuche die Dictionaries zu laden, aber ignoriere Fehler
+                        try
+                        {
+                            if (statsEl.TryGetProperty("protocolCount", out var protocolCountEl))
+                            {
+                                var dict = JsonSerializer.Deserialize<Dictionary<string, int>>(protocolCountEl.GetRawText(), JsonOptions);
+                                if (dict != null)
+                                {
+                                    foreach (var kvp in dict)
+                                        stats.ProtocolCount[kvp.Key] = kvp.Value;
+                                }
+                            }
+                        }
+                        catch { /* Ignoriere Dictionary-Fehler */ }
+
+                        try
+                        {
+                            if (statsEl.TryGetProperty("protocolBytes", out var protocolBytesEl))
+                            {
+                                var dict = JsonSerializer.Deserialize<Dictionary<string, long>>(protocolBytesEl.GetRawText(), JsonOptions);
+                                if (dict != null)
+                                {
+                                    foreach (var kvp in dict)
+                                        stats.ProtocolBytes[kvp.Key] = kvp.Value;
+                                }
+                            }
+                        }
+                        catch { /* Ignoriere Dictionary-Fehler */ }
+
+                        snapshot.Statistics = stats;
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log aber nicht abbrechen bei Statistik-Fehler
+                        System.Diagnostics.Debug.WriteLine($"Warnung: Statistiken konnten nicht geladen werden: {ex.Message}");
+                        // Erstelle leere Statistiken
+                        snapshot.Statistics = new PacketStatistics();
+                    }
                 }
 
                 // BACnet-Datenbank
                 if (root.TryGetProperty("bacnetDb", out var dbEl))
                 {
-                    snapshot.BacnetDb = JsonSerializer.Deserialize<AnalysisSnapshot.BACnetDatabaseSnapshot>(dbEl.GetRawText(), JsonOptions);
-                }
-
-                // Pakete
-                if (root.TryGetProperty("packets", out var packetsEl) && packetsEl.ValueKind == JsonValueKind.Array)
-                {
-                    snapshot.Packets = new List<NetworkPacket>();
-                    foreach (var packetEl in packetsEl.EnumerateArray())
+                    try
                     {
-                        var packet = JsonSerializer.Deserialize<NetworkPacket>(packetEl.GetRawText(), JsonOptions);
-                        if (packet != null)
-                            snapshot.Packets.Add(packet);
+                        snapshot.BacnetDb = JsonSerializer.Deserialize<AnalysisSnapshot.BACnetDatabaseSnapshot>(dbEl.GetRawText(), JsonOptions);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Warnung: BACnet-DB konnte nicht geladen werden: {ex.Message}");
                     }
                 }
 
+                // Pakete mit Progress
+                if (root.TryGetProperty("packets", out var packetsEl) && packetsEl.ValueKind == JsonValueKind.Array)
+                {
+                    snapshot.Packets = new List<NetworkPacket>();
+                    int count = 0;
+
+                    foreach (var packetEl in packetsEl.EnumerateArray())
+                    {
+                        try
+                        {
+                            // Lade Paket manuell, um Details-Dictionary-Overflow zu vermeiden
+                            var packet = new NetworkPacket();
+
+                            if (packetEl.TryGetProperty("packetNumber", out var pn)) packet.PacketNumber = pn.GetInt32();
+                            if (packetEl.TryGetProperty("timestamp", out var ts) && DateTime.TryParse(ts.GetString(), out var timestamp)) packet.Timestamp = timestamp;
+                            if (packetEl.TryGetProperty("packetLength", out var pl)) packet.PacketLength = pl.GetInt64();
+                            if (packetEl.TryGetProperty("sourceMac", out var sm)) packet.SourceMac = sm.GetString();
+                            if (packetEl.TryGetProperty("destinationMac", out var dm)) packet.DestinationMac = dm.GetString();
+                            if (packetEl.TryGetProperty("ethernetType", out var et)) packet.EthernetType = et.GetString();
+                            if (packetEl.TryGetProperty("sourceIp", out var sip)) packet.SourceIp = sip.GetString();
+                            if (packetEl.TryGetProperty("destinationIp", out var dip)) packet.DestinationIp = dip.GetString();
+                            if (packetEl.TryGetProperty("protocol", out var proto)) packet.Protocol = proto.GetString();
+                            if (packetEl.TryGetProperty("ttl", out var ttl)) packet.Ttl = ttl.GetInt32();
+                            if (packetEl.TryGetProperty("sourcePort", out var sp)) packet.SourcePort = sp.GetInt32();
+                            if (packetEl.TryGetProperty("destinationPort", out var dp)) packet.DestinationPort = dp.GetInt32();
+                            if (packetEl.TryGetProperty("applicationProtocol", out var ap)) packet.ApplicationProtocol = ap.GetString();
+                            if (packetEl.TryGetProperty("summary", out var sum)) packet.Summary = sum.GetString();
+                            if (packetEl.TryGetProperty("isReassembled", out var ir)) packet.IsReassembled = ir.GetBoolean();
+
+                            // Details Dictionary, RawData und HexData werden übersprungen um Overflow zu vermeiden
+                            packet.Details = new Dictionary<string, string>();
+
+                            snapshot.Packets.Add(packet);
+
+                            count++;
+                            if (count % PROGRESS_UPDATE_INTERVAL == 0)
+                            {
+                                ProgressChanged?.Invoke(this, (count, 0)); // 0 = unbekannte Gesamtzahl
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"Warnung: Paket {count} konnte nicht geladen werden: {ex.Message}");
+                            count++; // Zähle trotzdem weiter
+                        }
+                    }
+
+                    // Finale Progress-Meldung mit Gesamtzahl
+                    ProgressChanged?.Invoke(this, (count, count));
+                }
+
                 return snapshot;
+            }
+            catch (OverflowException ex)
+            {
+                throw new Exception($"Arithmetischer Überlauf beim Laden. " +
+                    $"Die Datei enthält möglicherweise zu große Werte. Details: {ex.Message}", ex);
             }
             catch (OutOfMemoryException ex)
             {
@@ -205,6 +312,10 @@ namespace BACnetPana.DataAccess
             catch (IOException ex)
             {
                 throw new Exception($"Fehler beim Lesen der Datei: {ex.Message}", ex);
+            }
+            catch (JsonException ex)
+            {
+                throw new Exception($"Fehler beim Parsen der JSON-Daten: {ex.Message}", ex);
             }
             catch (Exception ex)
             {

@@ -17,7 +17,6 @@ namespace BACnetPana.Core.ViewModels
         private TSharkBACnetParser? _tsharkParser;
         private bool _tsharkAvailable = false;
         private readonly StatisticsCalculator _statsCalculator;
-        private readonly AnalysisSnapshotSerializer _snapshotSerializer;
         private SynchronizationContext _synchronizationContext;
 
         [ObservableProperty]
@@ -69,9 +68,6 @@ namespace BACnetPana.Core.ViewModels
         private bool isAnalysisReady;
 
         [ObservableProperty]
-        private bool hasAnalysisData;
-
-        [ObservableProperty]
         private string? currentAnalysisFile;
 
         public MainViewModel()
@@ -79,7 +75,6 @@ namespace BACnetPana.Core.ViewModels
             // Immer SharpPcap für das generelle Parsing verwenden
             _sharpPcapReader = new PcapFileReader();
             _statsCalculator = new StatisticsCalculator();
-            _snapshotSerializer = new AnalysisSnapshotSerializer();
             _synchronizationContext = SynchronizationContext.Current ?? new SynchronizationContext();
 
             Packets = new ObservableCollection<NetworkPacket>();
@@ -263,7 +258,6 @@ namespace BACnetPana.Core.ViewModels
                     AddLog($"✅ TShark: {enrichedCount} BACnet-Pakete mit Details angereichert");
                     IsPhase2Complete = true;
                     IsAnalysisReady = true;
-                    HasAnalysisData = true;
                     IsLoading = false;
                     progressCallback("Phase 2/2", $"✅ {enrichedCount} Pakete analysiert", 100);
                 }
@@ -271,7 +265,6 @@ namespace BACnetPana.Core.ViewModels
                 {
                     IsPhase2Complete = true;
                     IsAnalysisReady = true;
-                    HasAnalysisData = true;
                     IsLoading = false;
                 }
 
@@ -616,131 +609,5 @@ namespace BACnetPana.Core.ViewModels
                 while (LogMessages.Count > 1000)
                     LogMessages.RemoveAt(0);
             }, null);
-        }
-        /// <summary>
-        /// Speichert den aktuellen Analysezustand in eine Datei
-        /// </summary>
-        public async Task<bool> SaveAnalysisAsync(string filePath, bool onlyBacnetPackets = true)
-        {
-            try
-            {
-                if (Packets == null || Packets.Count == 0)
-                {
-                    AddLog("❌ Keine Daten zum Speichern vorhanden");
-                    return false;
-                }
-
-                int bacnetCount = Packets.Count(p => p.ApplicationProtocol == "BACnet" ||
-                                                      p.DestinationPort == 47808 ||
-                                                      p.SourcePort == 47808);
-
-                if (onlyBacnetPackets && bacnetCount > 0)
-                {
-                    AddLog($"💾 Speichere Analyse (nur {bacnetCount:N0} BACnet-Pakete von {Packets.Count:N0})");
-                }
-                else
-                {
-                    AddLog($"💾 Speichere Analyse ({Packets.Count:N0} Pakete)");
-                }
-
-                IsLoading = true;
-                LoadingMessage = "Speichere Analyse...";
-
-                var snapshot = new AnalysisSnapshot
-                {
-                    OriginalPcapFile = CurrentAnalysisFile,
-                    Packets = Packets.ToList(),
-                    Statistics = PacketStatistics,
-                    BacnetDb = BacnetDatabase != null
-                        ? AnalysisSnapshot.BACnetDatabaseSnapshot.FromBACnetDatabase(BacnetDatabase)
-                        : null
-                };
-
-                // Progress-Handler
-                _snapshotSerializer.ProgressChanged += (s, progress) =>
-                {
-                    int percent = progress.total > 0 ? (progress.current * 100 / progress.total) : 0;
-                    LoadingMessage = $"Speichere: {progress.current:N0} / {progress.total:N0} Pakete ({percent}%)";
-                };
-
-                await _snapshotSerializer.SaveAsync(filePath, snapshot, onlyBacnetPackets);
-
-                int savedCount = onlyBacnetPackets ? bacnetCount : Packets.Count;
-                AddLog($"✅ Analyse gespeichert ({savedCount:N0} Pakete)");
-                AddLog($"    Datei: {System.IO.Path.GetFileName(filePath)}");
-
-                var fileInfo = new System.IO.FileInfo(filePath);
-                AddLog($"    Größe: {fileInfo.Length / 1024 / 1024:N1} MB");
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                AddLog($"❌ Fehler beim Speichern: {ex.Message}");
-                return false;
-            }
-            finally
-            {
-                IsLoading = false;
-                LoadingMessage = string.Empty;
-            }
-        }
-
-        /// <summary>
-        /// Lädt einen gespeicherten Analysezustand aus einer Datei
-        /// </summary>
-        public async Task<bool> LoadAnalysisAsync(string filePath)
-        {
-            try
-            {
-                AddLog($"📂 Lade Analyse von: {filePath}");
-                IsLoading = true;
-                LoadingMessage = "Lade Analyse...";
-
-                var snapshot = await _snapshotSerializer.LoadAsync(filePath);
-
-                // Übernehme Daten ins ViewModel
-                Packets.Clear();
-                foreach (var packet in snapshot.Packets)
-                {
-                    Packets.Add(packet);
-                }
-
-                if (snapshot.Statistics != null)
-                {
-                    PacketStatistics = snapshot.Statistics;
-                }
-
-                if (snapshot.BacnetDb != null)
-                {
-                    BacnetDatabase = snapshot.BacnetDb.ToBACnetDatabase();
-                }
-
-                CurrentAnalysisFile = snapshot.OriginalPcapFile;
-                LoadedPacketCount = Packets.Count;
-                IsPhase1Complete = true;
-                IsPhase2Complete = true;
-                IsAnalysisReady = true;
-                HasAnalysisData = true;
-
-                AddLog($"✅ Analyse geladen ({Packets.Count:N0} Pakete)");
-                AddLog($"    Erstellt: {snapshot.CreatedAt:dd.MM.yyyy HH:mm}");
-                if (!string.IsNullOrEmpty(snapshot.OriginalPcapFile))
-                {
-                    AddLog($"    Original: {System.IO.Path.GetFileName(snapshot.OriginalPcapFile)}");
-                }
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                AddLog($"❌ Fehler beim Laden: {ex.Message}");
-                return false;
-            }
-            finally
-            {
-                IsLoading = false;
-                LoadingMessage = string.Empty;
-            }
         }    }
 }

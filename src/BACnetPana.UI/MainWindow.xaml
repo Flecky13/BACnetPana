@@ -27,19 +27,6 @@
                             Click="OpenFileButton_Click">
                         <TextBlock Text="📁 PCAP öffnen" TextWrapping="NoWrap"/>
                     </Button>
-                    <Button x:Name="LoadAnalysisButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="100"
-                            Background="#8E44AD" Foreground="White" FontSize="16"
-                            Click="LoadAnalysisButton_Click"
-                            ToolTip="Gespeicherte Analyse öffnen">
-                        <TextBlock Text="📂 Analyse laden" TextWrapping="NoWrap"/>
-                    </Button>
-                    <Button x:Name="SaveAnalysisButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="100"
-                            Background="#E67E22" Foreground="White" FontSize="16"
-                            Click="SaveAnalysisButton_Click"
-                            IsEnabled="{Binding HasAnalysisData}"
-                            ToolTip="Analyse für späteren Zugriff speichern">
-                        <TextBlock Text="💾 Analyse speichern" TextWrapping="NoWrap"/>
-                    </Button>
                     <Button x:Name="AnalysisButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="100"
                             Background="#107C10" Foreground="White" FontSize="16"
                             Click="AnalysisButton_Click"

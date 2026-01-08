@@ -54,19 +54,21 @@ namespace BACnetPana.Models
 
         public double GetDurationSeconds()
         {
-            return (EndTime - StartTime).TotalSeconds;
+            var duration = (EndTime - StartTime).TotalSeconds;
+            return duration > 0 ? duration : 0;
         }
 
         public double GetPacketsPerSecond()
         {
             var duration = GetDurationSeconds();
-            return duration > 0 ? TotalPackets / duration : 0;
+            return duration > 0 ? (double)TotalPackets / duration : 0;
         }
 
         public double GetMegabitsPerSecond()
         {
             var duration = GetDurationSeconds();
-            return duration > 0 ? (TotalBytes * 8) / (duration * 1000000) : 0;
+            // Cast zu double VOR Multiplikation um Overflow zu vermeiden
+            return duration > 0 ? ((double)TotalBytes * 8.0) / (duration * 1000000.0) : 0;
         }
     }
 }
