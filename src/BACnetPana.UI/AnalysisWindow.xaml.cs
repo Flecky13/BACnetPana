@@ -272,12 +272,7 @@ namespace BACnetPana.UI
                 .Where(IsBroadcast)
                 .ToList();
 
-            var totalBroadcasts = broadcastPackets.Count;
-            if (BroadcastCountLabel != null)
-            {
-                BroadcastCountLabel.Text = $"Broadcasts: {totalBroadcasts}";
-            }
-
+            int totalBroadcasts = broadcastPackets.Count;
             // Top-Absender aggregieren
             var allSources = broadcastPackets
                 .GroupBy(p => string.IsNullOrWhiteSpace(p.SourceIp) ? "Unbekannt" : p.SourceIp)
@@ -648,13 +643,130 @@ namespace BACnetPana.UI
 
             if (bacnetPackets.Count == 0)
             {
-                if (BACnetServicesAnalysisBorder != null)
-                    BACnetServicesAnalysisBorder.Visibility = Visibility.Collapsed;
+                if (BACnetTopDevicesBorder != null)
+                    BACnetTopDevicesBorder.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            if (BACnetServicesAnalysisBorder != null)
-                BACnetServicesAnalysisBorder.Visibility = Visibility.Visible;
+            if (BACnetTopDevicesBorder != null)
+                BACnetTopDevicesBorder.Visibility = Visibility.Visible;
+
+            // Debug: Ausgabe der BACnet-Datenbank
+            System.Diagnostics.Debug.WriteLine($"UpdateBACnetServicesAnalysis: IpToInstance enthält {_bacnetDb.IpToInstance.Count} Einträge");
+            foreach (var kvp in _bacnetDb.IpToInstance.Take(5))
+            {
+                System.Diagnostics.Debug.WriteLine($"  IP: {kvp.Key} -> Instance: {kvp.Value}");
+            }
+
+            // Aggregiere BACnet-Geräte nach Quell-IP (die meisten Anfragen)
+            var deviceRequests = bacnetPackets
+                .GroupBy(p => string.IsNullOrWhiteSpace(p.SourceIp) ? "Unbekannt" : p.SourceIp)
+                .Select(g => new
+                {
+                    Ip = g.Key,
+                    Count = g.Count(),
+                    // Versuche Instanznummer aus BACnet-Datenbank zu holen
+                    Instance = _bacnetDb.IpToInstance.ContainsKey(g.Key) ? _bacnetDb.IpToInstance[g.Key] : null
+                })
+                .ToList();
+
+            // Ergänze Geräte, die nur durch I-Am (tshark) bekannt sind, auch wenn sie keine weiteren Pakete haben
+            foreach (var kvp in _bacnetDb.IpToInstance)
+            {
+                if (deviceRequests.Any(d => d.Ip == kvp.Key))
+                    continue;
+
+                deviceRequests.Add(new
+                {
+                    Ip = kvp.Key,
+                    Count = 1, // mindestens ein I-Am gesehen
+                    Instance = kvp.Value
+                });
+            }
+
+            // Debug: Ausgabe der Top-Geräte vor Formatierung
+            System.Diagnostics.Debug.WriteLine($"Top-Geräte gefunden: {deviceRequests.Count}");
+            foreach (var dev in deviceRequests.Take(5))
+            {
+                System.Diagnostics.Debug.WriteLine($"  IP: {dev.Ip}, Count: {dev.Count}, Instance: {dev.Instance ?? "NULL"}");
+            }
+
+            var formattedDevices = deviceRequests
+                .Select(x => new
+                {
+                    Device = !string.IsNullOrWhiteSpace(x.Instance)
+                        ? $"{x.Instance} ({x.Ip})"
+                        : $"nicht ermittelbar ({x.Ip})",
+                    Count = x.Count
+                })
+                .OrderByDescending(x => x.Count)
+                .ToList();
+
+            var totalDevices = formattedDevices.Count;
+            if (TopDevicesCountLabel != null)
+            {
+                TopDevicesCountLabel.Text = $"Geräte: {totalDevices}";
+            }
+
+            // Top 10 Geräte für Chart
+            var topDevices = formattedDevices.Take(10).ToList();
+
+            var barHeight = 22;
+            var desiredHeight = Math.Max(10, topDevices.Count) * barHeight;
+
+            var topDevicesModel = new PlotModel
+            {
+                Title = "BACnet-Geräte (Top 10 Anfragen)",
+                Background = OxyColors.White
+            };
+
+            var categoryAxis = new CategoryAxis
+            {
+                Position = AxisPosition.Left,
+                ItemsSource = topDevices,
+                LabelField = "Device",
+                GapWidth = 0.5
+            };
+            topDevicesModel.Axes.Add(categoryAxis);
+
+            var valueAxis = new LinearAxis
+            {
+                Position = AxisPosition.Bottom,
+                Title = "Anzahl Anfragen",
+                MinimumPadding = 0,
+                AbsoluteMinimum = 0,
+                MajorGridlineStyle = LineStyle.Solid,
+                MinorGridlineStyle = LineStyle.Dot,
+                MajorGridlineColor = OxyColor.FromRgb(220, 220, 220),
+                MinorGridlineColor = OxyColor.FromRgb(240, 240, 240)
+            };
+            topDevicesModel.Axes.Add(valueAxis);
+
+            if (TopDevicesChart != null)
+            {
+                TopDevicesChart.Height = desiredHeight;
+            }
+
+            var series = new BarSeries
+            {
+                ItemsSource = topDevices,
+                ValueField = "Count",
+                FillColor = OxyColor.FromRgb(23, 162, 184), // #17A2B8
+                StrokeColor = OxyColor.FromRgb(18, 130, 147),
+                StrokeThickness = 1,
+                BarWidth = 0.6,
+                LabelFormatString = "{0}",
+                LabelPlacement = LabelPlacement.Inside,
+                LabelMargin = 2,
+                TextColor = OxyColors.White
+            };
+            topDevicesModel.Series.Add(series);
+
+            if (TopDevicesChart != null)
+            {
+                TopDevicesChart.Model = topDevicesModel;
+                TopDevicesChart.Controller = _noWheelController;
+            }
 
             var unconfirmedServicesCount = 0;
             var errorCount = 0;
@@ -961,12 +1073,20 @@ namespace BACnetPana.UI
             {
                 BACnetDatabaseStatsBorder.Visibility = Visibility.Visible;
 
-                if (BACnetDbInstanceCountLabel != null)
-                    BACnetDbInstanceCountLabel.Text = (_bacnetDb.IpToInstance?.Count ?? 0).ToString();
-                if (BACnetDbDeviceNameCountLabel != null)
-                    BACnetDbDeviceNameCountLabel.Text = (_bacnetDb.IpToDeviceName?.Count ?? 0).ToString();
-                if (BACnetDbVendorCountLabel != null)
-                    BACnetDbVendorCountLabel.Text = (_bacnetDb.IpToVendorId?.Count ?? 0).ToString();
+                int totalDevices = _bacnetDb.AllDevices?.Count ?? 0;
+                int withInstance = _bacnetDb.IpToInstance?.Count ?? 0;
+                int withoutInstance = Math.Max(0, totalDevices - withInstance);
+                int vendorDistinct = _bacnetDb.IpToVendorId?.Values
+                    .Where(v => !string.IsNullOrWhiteSpace(v))
+                    .Distinct()
+                    .Count() ?? 0;
+
+                if (BACnetDbTotalDevicesLabel != null)
+                    BACnetDbTotalDevicesLabel.Text = totalDevices.ToString();
+                if (BACnetDbNoInstanceCountLabel != null)
+                    BACnetDbNoInstanceCountLabel.Text = withoutInstance.ToString();
+                if (BACnetDbVendorDistinctLabel != null)
+                    BACnetDbVendorDistinctLabel.Text = vendorDistinct.ToString();
             }
         }
     }

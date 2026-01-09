@@ -118,6 +118,11 @@ namespace BACnetPana.DataAccess
             var packets = new List<NetworkPacket>();
             BACnetDb = new BACnetDatabase(); // Reset bei jedem neuen File
 
+            // Extrahiere zunächst I-Am Devices direkt aus PCAP mit tshark
+            ProgressChanged?.Invoke(this, "Extrahiere I-Am Devices...");
+            BACnetDb.ExtractIAmDevicesFromPcap(filePath);
+            ProgressChanged?.Invoke(this, $"I-Am Devices gefunden: {BACnetDb.IpToInstance.Count}");
+
             try
             {
                 ProgressChanged?.Invoke(this, "Starte TShark...");

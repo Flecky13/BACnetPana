@@ -19,6 +19,9 @@ namespace BACnetPana.Models
         // Mapping: IP-Adresse -> Vendor-ID
         public Dictionary<string, string> IpToVendorId { get; } = new Dictionary<string, string>();
 
+        // Menge aller Geräte (IP), die jemals ein BACnet-Paket gesendet haben
+        public HashSet<string> AllDevices { get; } = new HashSet<string>();
+
         // Debug-Zähler
         private int _totalPacketsProcessed = 0;
         private int _bacnetPacketsFound = 0;
@@ -49,6 +52,8 @@ namespace BACnetPana.Models
         {
             _totalPacketsProcessed++;
 
+            var sourceIp = string.IsNullOrWhiteSpace(packet.SourceIp) ? "Unbekannt" : packet.SourceIp;
+
             // Erkenne BACnet-Pakete mit der GLEICHEN Logik wie in AnalysisWindow!
             // 3-Teil-Filter: ApplicationProtocol ODER Destination-Port ODER Source-Port
             bool isApplicationProtocolBACnet = packet.ApplicationProtocol?.ToUpper() == "BACNET";
@@ -59,6 +64,11 @@ namespace BACnetPana.Models
 
             if (!isBACnet)
                 return;
+
+            if (!string.IsNullOrWhiteSpace(sourceIp) && !string.Equals(sourceIp, "Unbekannt", StringComparison.OrdinalIgnoreCase))
+            {
+                AllDevices.Add(sourceIp);
+            }
 
             // Zähle was erkannt wurde
             if (isApplicationProtocolBACnet) _bacnetByApplicationProtocol++;
@@ -72,11 +82,10 @@ namespace BACnetPana.Models
 
             _bacnetPacketsFound++;
             _packetsWithDetails++;
-
-            var sourceIp = string.IsNullOrWhiteSpace(packet.SourceIp) ? "Unbekannt" : packet.SourceIp;
             string? instanceCandidate = null;
             string? deviceNameCandidate = null;
             string? vendorIdCandidate = null;
+            bool isIAm = false;
 
             foreach (var detail in packet.Details)
             {
@@ -84,13 +93,41 @@ namespace BACnetPana.Models
                 var rawValue = detail.Value ?? string.Empty;
                 var valueLower = rawValue.ToLower();
 
-                // Suche nach Instanznummer in verschiedenen Feldern
+                // Prüfe ob es ein I-Am Paket ist (suche nach "i-am" oder "iam" im Value)
+                if (!isIAm && (valueLower.Contains("i-am") || valueLower.Contains("iam")))
+                {
+                    isIAm = true;
+                }
+
+                // Priorität 1: bacapp.instance_number (bei I-Am Paketen)
+                if (instanceCandidate == null && (key == "bacapp.instance_number" || key.Contains("instance_number")))
+                {
+                    if (!string.IsNullOrWhiteSpace(rawValue))
+                    {
+                        var extracted = ExtractInstanceNumber(rawValue);
+                        if (!string.IsNullOrEmpty(extracted))
+                            instanceCandidate = extracted;
+                    }
+                }
+
+                // Priorität 2: "device,XXXXX" Pattern aus i-Am Service String
+                if (instanceCandidate == null && valueLower.Contains("device,"))
+                {
+                    var parts = rawValue.Split(new[] { "device," }, StringSplitOptions.None);
+                    if (parts.Length > 1)
+                    {
+                        var extracted = ExtractInstanceNumber(parts[1]);
+                        if (!string.IsNullOrEmpty(extracted))
+                            instanceCandidate = extracted;
+                    }
+                }
+
+                // Priorität 3: objectidentifier, device_instance, etc.
                 if (instanceCandidate == null)
                 {
                     if (key.Contains("objectidentifier") ||
                         key.Contains("device_instance") ||
-                        key.Contains("object_instance") ||
-                        key.Contains("instance"))
+                        key.Contains("object_instance"))
                     {
                         var parsed = ExtractInstanceNumber(rawValue);
                         if (!string.IsNullOrEmpty(parsed))
@@ -119,15 +156,20 @@ namespace BACnetPana.Models
                 }
             }
 
-            // Speichere Instanznummer wenn gefunden (bevorzugt von I-Am Paketen)
+            // Speichere Instanznummer (bei I-Am Paketen mit höchster Priorität)
             if (!string.IsNullOrEmpty(instanceCandidate))
             {
-                if (!IpToInstance.ContainsKey(sourceIp))
+                if (isIAm)
                 {
+                    // Bei I-Am: Immer speichern/überschreiben
+                    IpToInstance[sourceIp] = instanceCandidate;
+                }
+                else if (!IpToInstance.ContainsKey(sourceIp))
+                {
+                    // Bei anderen Paketen: Nur wenn noch nicht vorhanden
                     IpToInstance[sourceIp] = instanceCandidate;
                 }
             }
-
             // Speichere Device-Namen (unabhängig von I-Am)
             if (!string.IsNullOrEmpty(deviceNameCandidate))
             {
@@ -201,6 +243,177 @@ namespace BACnetPana.Models
                         TcpMetrics.KeepAlive++;
                 }
             }
+        }
+
+        /// <summary>
+        /// Extrahiert I-Am Pakete aus einer PCAP-Datei mit tshark und befüllt IpToInstance
+        /// Nutzt tshark Filter: bacnet.service == 0 (I-Am) oder "i-am" im Service-String
+        /// </summary>
+        public void ExtractIAmDevicesFromPcap(string pcapFilePath)
+        {
+            try
+            {
+                var tsharkPath = FindTShark();
+                System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: tsharkPath = {tsharkPath ?? "NULL"}");
+
+                if (string.IsNullOrWhiteSpace(tsharkPath))
+                {
+                    System.Diagnostics.Debug.WriteLine("ExtractIAmDevicesFromPcap: tshark nicht gefunden!");
+                    return;
+                }
+
+                // Filter für I-Am (0) und I-Have (1) - nutze Info-Spalte zum Parsen von "device,XXXXX"
+                // Felder: ip.src | bacapp.instance_number (I-Am) | _ws.col.Info (für I-Have parsing)
+                var arguments = $"-r \"{pcapFilePath}\" -Y \"bacapp.unconfirmed_service == 0 || bacapp.unconfirmed_service == 1\" -T fields -e ip.src -e bacapp.instance_number -e _ws.col.Info";
+                System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: Arguments = {arguments}");
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = tsharkPath,
+                    Arguments = arguments,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using (var process = System.Diagnostics.Process.Start(psi))
+                {
+                    if (process == null)
+                    {
+                        System.Diagnostics.Debug.WriteLine("ExtractIAmDevicesFromPcap: Process.Start() returned null");
+                        return;
+                    }
+
+                    string output = process.StandardOutput.ReadToEnd();
+                    string errorOutput = process.StandardError.ReadToEnd();
+                    process.WaitForExit();
+
+                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: ExitCode = {process.ExitCode}");
+                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: Output length = {output.Length}");
+                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: StdErr = {errorOutput}");
+
+                    if (!string.IsNullOrWhiteSpace(output))
+                    {
+                        System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: First 200 chars of output: {output.Substring(0, Math.Min(200, output.Length))}");
+                    }
+
+                    if (process.ExitCode != 0)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: tshark ExitCode != 0");
+                        return;
+                    }
+
+                    // Parse Output: "IP\tInstance\tInfo\n..."
+                    var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: Anzahl Zeilen = {lines.Length}");
+
+                    int successCount = 0;
+                    foreach (var line in lines)
+                    {
+                        var parts = line.Split(new[] { '\t' }, StringSplitOptions.None);
+                        System.Diagnostics.Debug.WriteLine($"  Line: '{line}' -> Parts: {parts.Length}");
+
+                        if (parts.Length >= 1)
+                        {
+                            string ip = parts[0].Trim();
+                            string instance = "";
+
+                            if (!string.IsNullOrWhiteSpace(ip))
+                            {
+                                AllDevices.Add(ip);
+                            }
+
+                            // Priorität 1: bacapp.instance_number (I-Am)
+                            if (parts.Length >= 2 && !string.IsNullOrWhiteSpace(parts[1]))
+                            {
+                                instance = parts[1].Trim();
+                            }
+
+                            // Priorität 2: Parse "device,XXXXX" aus Info-Spalte (I-Have)
+                            if (string.IsNullOrWhiteSpace(instance) && parts.Length >= 3)
+                            {
+                                string info = parts[2];
+                                if (info.Contains("device,"))
+                                {
+                                    var deviceParts = info.Split(new[] { "device," }, StringSplitOptions.None);
+                                    if (deviceParts.Length > 1)
+                                    {
+                                        // Extrahiere Ziffern nach "device,"
+                                        instance = ExtractInstanceNumber(deviceParts[1]);
+                                    }
+                                }
+                            }
+
+                            System.Diagnostics.Debug.WriteLine($"    IP: '{ip}', Instance: '{instance}'");
+
+                            if (!string.IsNullOrWhiteSpace(ip) && !string.IsNullOrWhiteSpace(instance))
+                            {
+                                IpToInstance[ip] = instance;
+                                successCount++;
+                                System.Diagnostics.Debug.WriteLine($"    ✓ Hinzugefügt");
+                            }
+                            else
+                            {
+                                System.Diagnostics.Debug.WriteLine($"    ✗ IP oder Instance leer");
+                            }
+                        }
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: {successCount} Devices hinzugefügt. Total: {IpToInstance.Count}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap EXCEPTION: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap STACKTRACE: {ex.StackTrace}");
+            }
+        }
+
+        /// <summary>
+        /// Sucht tshark.exe in Standardpfaden
+        /// </summary>
+        private static string? FindTShark()
+        {
+            var possiblePaths = new[]
+            {
+                @"C:\Program Files\Wireshark\tshark.exe",
+                @"C:\Program Files (x86)\Wireshark\tshark.exe",
+                "tshark.exe"
+            };
+
+            foreach (var path in possiblePaths)
+            {
+                try
+                {
+                    if (System.IO.File.Exists(path))
+                        return path;
+                }
+                catch { }
+            }
+
+            // Versuche aus PATH
+            try
+            {
+                var process = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "tshark",
+                    Arguments = "--version",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true
+                });
+
+                if (process != null)
+                {
+                    process.WaitForExit();
+                    if (process.ExitCode == 0)
+                        return "tshark";
+                }
+            }
+            catch { }
+
+            return null;
         }
 
         /// <summary>

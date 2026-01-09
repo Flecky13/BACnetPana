@@ -372,16 +372,16 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,0">
-                                            <TextBlock Text="Geräte mit Instanznummer:" FontWeight="SemiBold" Margin="0,0,6,0"/>
-                                            <TextBlock x:Name="BACnetDbInstanceCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
+                                            <TextBlock Text="Geräte gesamt:" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="BACnetDbTotalDevicesLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0">
-                                            <TextBlock Text="Geräte mit Namen:" FontWeight="SemiBold" Margin="0,0,6,0"/>
-                                            <TextBlock x:Name="BACnetDbDeviceNameCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
+                                            <TextBlock Text="Ohne Instanznummer:" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="BACnetDbNoInstanceCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Orientation="Horizontal">
-                                            <TextBlock Text="Geräte mit Vendor-ID:" FontWeight="SemiBold" Margin="0,0,6,0"/>
-                                            <TextBlock x:Name="BACnetDbVendorCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
+                                            <TextBlock Text="Vendor-IDs (unique):" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="BACnetDbVendorDistinctLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
                                         </StackPanel>
                                     </Grid>
                                 </StackPanel>
@@ -695,12 +695,26 @@
                                 </StackPanel>
                             </Border>
 
-                            <!-- BACnet Services Analysis Section -->
-                            <Border x:Name="BACnetServicesAnalysisBorder" Background="White" BorderBrush="#17A2B8" BorderThickness="2" Padding="15" Margin="0,0,0,0" MinHeight="180" Visibility="Collapsed">
-                                <StackPanel Orientation="Vertical">
-                                    <TextBlock Text="BACnet-Services (Reserviert)" FontWeight="Bold" FontSize="13" Margin="0,0,0,12" Foreground="#17A2B8"/>
-                                    <TextBlock Text="Dieser Bereich ist für zukünftige Verwendung reserviert." FontSize="11" Foreground="#888"/>
-                                </StackPanel>
+                            <!-- BACnet Top Devices Section -->
+                            <Border x:Name="BACnetTopDevicesBorder" Background="White" BorderBrush="#17A2B8" BorderThickness="2" Padding="15" Margin="0,8,0,0" MinHeight="280" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="BACnet-Geräte (Top 10 Anfragen)" FontWeight="Bold" Margin="0,0,0,6"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TopDevicesCountLabel" Text="Geräte: 0" HorizontalAlignment="Right" FontWeight="Bold" Foreground="#17A2B8"/>
+
+                                    <oxy:PlotView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TopDevicesChart" Height="240" Margin="0,6,0,0" PreviewMouseWheel="PlotView_PreviewMouseWheel" />
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Hinweis: nicht ermittelbar = kein I-Am oder I-Have von diesem Gerät empfangen" Margin="0,8,0,0" Foreground="#555" FontStyle="Italic" />
+                                </Grid>
                             </Border>
                         </StackPanel>
                     </Border>
