@@ -193,6 +193,12 @@ namespace BACnetPana.Models
                         TcpMetrics.Resets++;
                     else if (key.Contains("lost_segment") || val.Contains("lost segment") || key.Contains("tcp lost segment") || val.Contains("tcp lost segment"))
                         TcpMetrics.LostSegments++;
+                    else if (key.Contains("out_of_order") || val.Contains("out of order") || key.Contains("tcp out-of-order") || val.Contains("tcp out of order"))
+                        TcpMetrics.OutOfOrder++;
+                    else if (key.Contains("zero_window") || val.Contains("zero window") || key.Contains("window size") && val.Contains("0"))
+                        TcpMetrics.WindowSizeZero++;
+                    else if (key.Contains("keep_alive") || val.Contains("keep alive") || key.Contains("keepalive") || val.Contains("keepalive"))
+                        TcpMetrics.KeepAlive++;
                 }
             }
         }

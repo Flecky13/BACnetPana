@@ -153,7 +153,7 @@
                             </Border>
 
                             <!-- TCP Analysis Section -->
-                            <Border x:Name="TcpAnalysisBorder" Background="White" BorderBrush="#FFC107" BorderThickness="2" Padding="15" Margin="0,0,0,8" MinHeight="180" Visibility="Collapsed">
+                            <Border x:Name="TcpAnalysisBorder" Background="White" BorderBrush="#FFC107" BorderThickness="2" Padding="15" Margin="0,0,0,8" MinHeight="150" Visibility="Collapsed">
                                 <Grid>
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
@@ -162,6 +162,7 @@
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
                                     <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
@@ -184,7 +185,7 @@
                                             <TextBlock Text="TcpRetransmission:" FontWeight="Bold" Margin="8,0,0,0"/>
                                             <TextBlock x:Name="TcpRetransmissionLabel" Text="0"  Foreground="#333" FontWeight="Bold" Margin="12,0,0,0"/>
                                         </StackPanel>
-                                        
+
                                     </StackPanel>
 
                                     <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,0">
@@ -217,6 +218,39 @@
                                             <Ellipse x:Name="TcpLostSegmentIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
                                             <TextBlock Text="TcpLostSegment:" FontWeight="Bold" Margin="8,0,0,0"/>
                                             <TextBlock x:Name="TcpLostSegmentLabel" Text="0" Foreground="#333" FontWeight="Bold" Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="3" Grid.Column="1" Margin="6,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                            <Ellipse x:Name="TcpOutOfOrderIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Out of Order:" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpOutOfOrderLabel" Text="0" Foreground="#333" FontWeight="Bold" Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="3" Grid.Column="2" Margin="6,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                            <Ellipse x:Name="TcpWindowSizeZeroIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Window Size 0:" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpWindowSizeZeroLabel" Text="0" Foreground="#333" FontWeight="Bold" Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="3" Grid.Column="3" Margin="6,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                            <Ellipse x:Name="TcpKeepAliveIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
+                                            <TextBlock Text="Keep-Alive:" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpKeepAliveLabel" Text="0" Foreground="#333" FontWeight="Bold" Margin="8,0,0,0"/>
+                                        </StackPanel>
+                                    </StackPanel>
+
+                                    <!-- Grid 4 - ICMP Unreachable -->
+                                    <StackPanel Grid.Row="4" Grid.Column="0" Margin="6,0">
+                                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,4">
+                                            <Ellipse x:Name="TcpIcmpUnreachableIndicator" Width="14" Height="14" Fill="#4CAF50" Stroke="#888" StrokeThickness="1" Margin="0,0,6,0"/>
+                                            <TextBlock Text="ICMP Unreachable:" FontWeight="Bold" Margin="8,0,0,0"/>
+                                            <TextBlock x:Name="TcpIcmpUnreachableLabel" Text="0" Foreground="#333" FontWeight="Bold" Margin="8,0,0,0"/>
                                         </StackPanel>
                                     </StackPanel>
                                 </Grid>
@@ -289,42 +323,120 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="4" Text="BACnet-Analyse" FontWeight="Bold" FontSize="13" Margin="0,0,0,8" Foreground="#28A745"/>
 
+                                    <!-- Row 1: Broadcasts, SimpleACK, ComplexACK -->
                                     <StackPanel Grid.Row="1" Grid.Column="0" Margin="6,0">
-                                        <TextBlock Text="Who-Is / Minute:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="BACnetWhoIsLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0">
-                                        <TextBlock Text="Broadcasts / Sekunde:" FontWeight="Bold"/>
+                                        <TextBlock Text="Gesamt Broadcasts:" FontWeight="Bold"/>
                                         <TextBlock x:Name="BACnetBroadcastsLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
                                     </StackPanel>
+                                    <StackPanel Grid.Row="1" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="SimpleACK (2):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetSimpleAckLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
                                     <StackPanel Grid.Row="1" Grid.Column="2" Margin="6,0">
-                                        <TextBlock Text="Confirmed Requests / s:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="BACnetConfirmedReqLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                        <TextBlock Text="ComplexACK (3):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetComplexAckLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
                                     </StackPanel>
                                     <StackPanel Grid.Row="1" Grid.Column="3" Margin="6,0">
-                                        <TextBlock Text="Retries / Sekunde:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="BACnetRetriesLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                        <TextBlock Text="—" Opacity="0"/>
+                                        <TextBlock Text="—" Opacity="0"/>
                                     </StackPanel>
 
+                                    <!-- Row 2: Who-Is, Who-Has, I-Am, I-Have -->
                                     <StackPanel Grid.Row="2" Grid.Column="0" Margin="6,0">
-                                        <TextBlock Text="Abort / Reject:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="BACnetAbortRejectLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                        <TextBlock Text="Who-Is (8):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetWhoIsLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
                                     </StackPanel>
                                     <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,0">
-                                        <TextBlock Text="RTT ReadProperty:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="BACnetRTTLabel" Text="—" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                        <TextBlock Text="Who-Has (7):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetWhoHasLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
                                     </StackPanel>
                                     <StackPanel Grid.Row="2" Grid.Column="2" Margin="6,0">
-                                        <TextBlock Text="Segmented Messages:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="BACnetSegmentedLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                        <TextBlock Text="I-Am (0):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetIAmLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
                                     </StackPanel>
                                     <StackPanel Grid.Row="2" Grid.Column="3" Margin="6,0">
-                                        <TextBlock Text="BBMD Registrierungen:" FontWeight="Bold"/>
-                                        <TextBlock x:Name="BACnetBBMDLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                        <TextBlock Text="I-Have (1):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetIHaveLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+
+                                    <!-- Row 3: ReadProperty, ReadPropertyMultiple, WriteProperty, WritePropertyMultiple -->
+                                    <StackPanel Grid.Row="3" Grid.Column="0" Margin="6,0">
+                                        <TextBlock Text="ReadProperty (12):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetReadPropertyLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="3" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="ReadPropertyMult. (14):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetReadPropertyMultLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="3" Grid.Column="2" Margin="6,0">
+                                        <TextBlock Text="WriteProperty (15):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetWritePropertyLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="3" Grid.Column="3" Margin="6,0">
+                                        <TextBlock Text="WritePropertyMult. (16):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetWritePropertyMultLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+
+                                    <!-- Row 4: SubscribeCOV, SubscribeCOVProperty, ConfirmedCOVNotification, ConfirmedEventNotification -->
+                                    <StackPanel Grid.Row="4" Grid.Column="0" Margin="6,0">
+                                        <TextBlock Text="SubscribeCOV (5):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetSubscribeCOVLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="4" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="SubscribeCOVProp. (28):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetSubscribeCOVPropLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="4" Grid.Column="2" Margin="6,0">
+                                        <TextBlock Text="Conf.COVNotif. (1):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetConfCOVNotifLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="4" Grid.Column="3" Margin="6,0">
+                                        <TextBlock Text="Conf.EventNotif. (2):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetConfEventNotifLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+
+                                    <!-- Row 5: AddListElement, RemoveListElement, ReadRange, GetEventInformation -->
+                                    <StackPanel Grid.Row="5" Grid.Column="0" Margin="6,0">
+                                        <TextBlock Text="AddListElement (8):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetAddListElementLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="5" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="RemoveListElement (9):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetRemoveListElementLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="5" Grid.Column="2" Margin="6,0">
+                                        <TextBlock Text="ReadRange (26):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetReadRangeLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="5" Grid.Column="3" Margin="6,0">
+                                        <TextBlock Text="GetEventInfo (29):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetGetEventInfoLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
+                                    </StackPanel>
+
+                                    <!-- Row 6: Error, Reject, Abort, ReinitializeDevice -->
+                                    <StackPanel Grid.Row="6" Grid.Column="0" Margin="6,0">
+                                        <TextBlock Text="Error (5):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetErrorLabel" Text="0" FontSize="16" Foreground="#DC3545" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="6" Grid.Column="1" Margin="6,0">
+                                        <TextBlock Text="Reject (6):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetRejectLabel" Text="0" FontSize="16" Foreground="#DC3545" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="6" Grid.Column="2" Margin="6,0">
+                                        <TextBlock Text="Abort (7):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetAbortLabel" Text="0" FontSize="16" Foreground="#DC3545" FontWeight="Bold"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Row="6" Grid.Column="3" Margin="6,0">
+                                        <TextBlock Text="ReinitializeDevice (20):" FontWeight="Bold"/>
+                                        <TextBlock x:Name="BACnetReinitDeviceLabel" Text="0" FontSize="16" Foreground="#28A745" FontWeight="Bold"/>
                                     </StackPanel>
                                 </Grid>
                             </Border>

@@ -386,6 +386,9 @@ namespace BACnetPana.UI
             var resetCount = 0;
             var icmpUnreachableCount = 0;
             var lostSegmentCount = 0;
+            var outOfOrderCount = 0;
+            var windowSizeZeroCount = 0;
+            var keepAliveCount = 0;
 
             foreach (var packet in tcpPackets)
             {
@@ -406,6 +409,12 @@ namespace BACnetPana.UI
                             resetCount++;
                         else if (key.Contains("lost_segment") || value.Contains("lost segment") || key.Contains("tcp lost segment") || value.Contains("tcp lost segment"))
                             lostSegmentCount++;
+                        else if (key.Contains("out_of_order") || value.Contains("out of order") || key.Contains("tcp out-of-order") || value.Contains("tcp out of order"))
+                            outOfOrderCount++;
+                        else if (key.Contains("zero_window") || value.Contains("zero window") || key.Contains("window size") && value.Contains("0"))
+                            windowSizeZeroCount++;
+                        else if (key.Contains("keep_alive") || value.Contains("keep alive") || key.Contains("keepalive") || value.Contains("keepalive"))
+                            keepAliveCount++;
                     }
                 }
             }
@@ -433,6 +442,14 @@ namespace BACnetPana.UI
                 TcpResetLabel.Text = resetCount.ToString();
             if (TcpLostSegmentLabel != null)
                 TcpLostSegmentLabel.Text = lostSegmentCount.ToString();
+            if (TcpOutOfOrderLabel != null)
+                TcpOutOfOrderLabel.Text = outOfOrderCount.ToString();
+            if (TcpWindowSizeZeroLabel != null)
+                TcpWindowSizeZeroLabel.Text = windowSizeZeroCount.ToString();
+            if (TcpKeepAliveLabel != null)
+                TcpKeepAliveLabel.Text = keepAliveCount.ToString();
+            if (TcpIcmpUnreachableLabel != null)
+                TcpIcmpUnreachableLabel.Text = icmpUnreachableCount.ToString();
 
             // Ampel-Farben basierend auf Prozentanteil
             double totalTcp = Math.Max(1, tcpPackets.Count);
@@ -441,9 +458,13 @@ namespace BACnetPana.UI
             SetAmpel(TcpFastRetransmissionIndicator, fastRetransmissionCount * 100.0 / totalTcp);
             SetAmpel(TcpResetIndicator, resetCount * 100.0 / totalTcp);
             SetAmpel(TcpLostSegmentIndicator, lostSegmentCount * 100.0 / totalTcp);
+            SetAmpel(TcpOutOfOrderIndicator, outOfOrderCount * 100.0 / totalTcp);
+            SetAmpel(TcpWindowSizeZeroIndicator, windowSizeZeroCount * 100.0 / totalTcp);
+            SetAmpel(TcpKeepAliveIndicator, keepAliveCount * 100.0 / totalTcp);
+            SetAmpel(TcpIcmpUnreachableIndicator, icmpUnreachableCount * 100.0 / totalTcp);
 
-            // Gesamtverlust: Summe relevanter Ereignisse (ohne Resets)
-            var lossEventsTotal = retransmissionCount + duplicateAckCount + fastRetransmissionCount + icmpUnreachableCount + resetCount + lostSegmentCount;
+            // Gesamtverlust: Summe aller TCP-Fehler
+            var lossEventsTotal = retransmissionCount + duplicateAckCount + fastRetransmissionCount + icmpUnreachableCount + resetCount + lostSegmentCount + outOfOrderCount + windowSizeZeroCount + keepAliveCount;
             var lossPercent = lossEventsTotal * 100.0 / totalTcp;
             if (TcpLossOverallLabel != null)
                 TcpLossOverallLabel.Text = $"{lossEventsTotal} ({lossPercent:F2} %)";
@@ -486,47 +507,96 @@ namespace BACnetPana.UI
             if (BACnetAnalysisBorder != null)
                 BACnetAnalysisBorder.Visibility = Visibility.Visible;
 
-            // Berechne Metriken
-            var whoIsCount = 0;
+            // Berechne Metriken - neue Service Codes
             var broadcastCount = 0;
-            var confirmedReqCount = 0;
-            var retryCount = 0;
-            var abortRejectCount = 0;
-            var rttReadPropertyValues = new List<double>();
-            var segmentedCount = 0;
-            var bbmdRegCount = 0;
+            var simpleAckCount = 0;      // 2
+            var complexAckCount = 0;     // 3
+            var whoIsCount = 0;          // 8
+            var whoHasCount = 0;         // 7
+            var iAmCount = 0;            // 0
+            var iHaveCount = 0;          // 1
+            var readPropertyCount = 0;   // 12
+            var readPropertyMultCount = 0; // 14
+            var writePropertyCount = 0;  // 15
+            var writePropertyMultCount = 0; // 16
+            var subscribeCOVCount = 0;   // 5
+            var subscribeCOVPropCount = 0; // 28
+            var confCOVNotifCount = 0;   // 1 (Confirmed)
+            var confEventNotifCount = 0; // 2 (Confirmed)
+            var addListElementCount = 0; // 8 (Confirmed)
+            var removeListElementCount = 0; // 9 (Confirmed)
+            var readRangeCount = 0;      // 26
+            var getEventInfoCount = 0;   // 29
+            var errorCount = 0;          // 5 (Error)
+            var rejectCount = 0;         // 6 (Reject)
+            var abortCount = 0;          // 7 (Abort)
+            var reinitDeviceCount = 0;   // 20
+            var totalBytes = 0;
 
             foreach (var packet in bacnetPackets)
             {
                 if (packet.Details != null)
                 {
-                    foreach (var detail in packet.Details)
+                    // Service Code erkennen (TShark liefert numerische Codes)
+                    if (packet.Details.TryGetValue("BACnet Service", out var service))
                     {
-                        var key = detail.Key?.ToLower() ?? "";
-                        var rawValue = detail.Value ?? string.Empty;
-                        var value = rawValue.ToLower();
-
-                        if (key.Contains("who-is") || value.Contains("who-is"))
-                            whoIsCount++;
-                        else if (key.Contains("broadcast") || value.Contains("broadcast"))
-                            broadcastCount++;
-                        else if ((key.Contains("confirmed") && key.Contains("request")) || (value.Contains("confirmed") && value.Contains("request")))
-                            confirmedReqCount++;
-                        else if (key.Contains("retry") || value.Contains("retry"))
-                            retryCount++;
-                        else if ((key.Contains("abort") || key.Contains("reject")) || (value.Contains("abort") || value.Contains("reject")))
-                            abortRejectCount++;
-                        else if ((key.Contains("rtt") && key.Contains("readproperty")) || (value.Contains("rtt") && value.Contains("readproperty")))
+                        var svc = (service ?? "").Trim();
+                        if (int.TryParse(svc, out var serviceCode))
                         {
-                            if (double.TryParse(rawValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var rttValue) ||
-                                double.TryParse(rawValue, NumberStyles.Any, CultureInfo.GetCultureInfo("de-DE"), out rttValue))
-                                rttReadPropertyValues.Add(rttValue);
+                            // Prüfe ob Confirmed oder Unconfirmed
+                            bool isConfirmed = false;
+                            if (packet.Details.TryGetValue("BACnet Type", out var typeConfirmed))
+                            {
+                                isConfirmed = typeConfirmed?.Contains("Confirmed") == true;
+                            }
+
+                            // Service-Codes verarbeiten (depends on Confirmed/Unconfirmed)
+                            if (isConfirmed)
+                            {
+                                // Confirmed Services
+                                switch (serviceCode)
+                                {
+                                    case 1: confCOVNotifCount++; break;      // ConfirmedCOVNotification
+                                    case 2: confEventNotifCount++; break;    // ConfirmedEventNotification
+                                    case 5: subscribeCOVCount++; break;      // SubscribeCOV
+                                    case 8: addListElementCount++; break;    // AddListElement
+                                    case 9: removeListElementCount++; break; // RemoveListElement
+                                    case 12: readPropertyCount++; break;     // ReadProperty
+                                    case 14: readPropertyMultCount++; break; // ReadPropertyMultiple
+                                    case 15: writePropertyCount++; break;    // WriteProperty
+                                    case 16: writePropertyMultCount++; break; // WritePropertyMultiple
+                                    case 20: reinitDeviceCount++; break;     // ReinitializeDevice
+                                    case 26: readRangeCount++; break;        // ReadRange
+                                    case 28: subscribeCOVPropCount++; break; // SubscribeCOVProperty
+                                    case 29: getEventInfoCount++; break;     // GetEventInformation
+                                }
+                            }
+                            else
+                            {
+                                // Unconfirmed Services
+                                switch (serviceCode)
+                                {
+                                    case 0: iAmCount++; break;          // I-Am
+                                    case 1: iHaveCount++; break;        // I-Have
+                                    case 2: simpleAckCount++; break;    // SimpleACK
+                                    case 3: complexAckCount++; break;   // ComplexACK
+                                    case 5: errorCount++; break;        // Error
+                                    case 6: rejectCount++; break;       // Reject
+                                    case 7: whoHasCount++; break;       // Who-Has
+                                    case 8: whoIsCount++; break;        // Who-Is
+                                }
+                            }
                         }
-                        else if (key.Contains("segment") || value.Contains("segment"))
-                            segmentedCount++;
-                        else if (key.Contains("bbmd") && key.Contains("registr") || value.Contains("bbmd") && value.Contains("registr"))
-                            bbmdRegCount++;
                     }
+
+                    // Bytes zählen
+                    totalBytes += (int)packet.PacketLength;
+                }
+
+                // Broadcast erkennen (nur BACnet Broadcasts über IP-Adresse)
+                if (IsBroadcast(packet))
+                {
+                    broadcastCount++;
                 }
             }
 
@@ -540,30 +610,61 @@ namespace BACnetPana.UI
             }
             var durationMinutes = durationSeconds / 60.0;
             var whoIsPerMinute = durationMinutes > 0 ? whoIsCount / durationMinutes : 0;
+            var whoHasPerMinute = durationMinutes > 0 ? whoHasCount / durationMinutes : 0;
             var broadcastPerSecond = durationSeconds > 0 ? broadcastCount / durationSeconds : 0;
-            var confirmedReqPerSecond = durationSeconds > 0 ? confirmedReqCount / durationSeconds : 0;
-            var retriesPerSecond = durationSeconds > 0 ? retryCount / durationSeconds : 0;
 
-            var avgRtt = rttReadPropertyValues.Count > 0 ? rttReadPropertyValues.Average() : 0;
-            var rttText = rttReadPropertyValues.Count > 0 ? $"{avgRtt:F2} ms" : "—";
-
-            // Update Labels
-            if (BACnetWhoIsLabel != null)
-                BACnetWhoIsLabel.Text = whoIsPerMinute.ToString("F2");
+            // Update Labels mit Gesamtzahl
             if (BACnetBroadcastsLabel != null)
-                BACnetBroadcastsLabel.Text = broadcastPerSecond.ToString("F2");
-            if (BACnetConfirmedReqLabel != null)
-                BACnetConfirmedReqLabel.Text = confirmedReqPerSecond.ToString("F2");
-            if (BACnetRetriesLabel != null)
-                BACnetRetriesLabel.Text = retriesPerSecond.ToString("F2");
-            if (BACnetAbortRejectLabel != null)
-                BACnetAbortRejectLabel.Text = abortRejectCount.ToString();
-            if (BACnetRTTLabel != null)
-                BACnetRTTLabel.Text = rttText;
-            if (BACnetSegmentedLabel != null)
-                BACnetSegmentedLabel.Text = segmentedCount.ToString();
-            if (BACnetBBMDLabel != null)
-                BACnetBBMDLabel.Text = bbmdRegCount.ToString();
+                BACnetBroadcastsLabel.Text = $"{broadcastPerSecond:F2}/s ({broadcastCount} total)";
+            if (BACnetSimpleAckLabel != null)
+                BACnetSimpleAckLabel.Text = $"{simpleAckCount} total";
+            if (BACnetComplexAckLabel != null)
+                BACnetComplexAckLabel.Text = $"{complexAckCount} total";
+
+            if (BACnetWhoIsLabel != null)
+                BACnetWhoIsLabel.Text = $"{whoIsPerMinute:F2}/min ({whoIsCount} total)";
+            if (BACnetWhoHasLabel != null)
+                BACnetWhoHasLabel.Text = $"{whoHasPerMinute:F2}/min ({whoHasCount} total)";
+            if (BACnetIAmLabel != null)
+                BACnetIAmLabel.Text = $"{iAmCount} total";
+            if (BACnetIHaveLabel != null)
+                BACnetIHaveLabel.Text = $"{iHaveCount} total";
+
+            if (BACnetReadPropertyLabel != null)
+                BACnetReadPropertyLabel.Text = $"{readPropertyCount} total";
+            if (BACnetReadPropertyMultLabel != null)
+                BACnetReadPropertyMultLabel.Text = $"{readPropertyMultCount} total";
+            if (BACnetWritePropertyLabel != null)
+                BACnetWritePropertyLabel.Text = $"{writePropertyCount} total";
+            if (BACnetWritePropertyMultLabel != null)
+                BACnetWritePropertyMultLabel.Text = $"{writePropertyMultCount} total";
+
+            if (BACnetSubscribeCOVLabel != null)
+                BACnetSubscribeCOVLabel.Text = $"{subscribeCOVCount} total";
+            if (BACnetSubscribeCOVPropLabel != null)
+                BACnetSubscribeCOVPropLabel.Text = $"{subscribeCOVPropCount} total";
+            if (BACnetConfCOVNotifLabel != null)
+                BACnetConfCOVNotifLabel.Text = $"{confCOVNotifCount} total";
+            if (BACnetConfEventNotifLabel != null)
+                BACnetConfEventNotifLabel.Text = $"{confEventNotifCount} total";
+
+            if (BACnetAddListElementLabel != null)
+                BACnetAddListElementLabel.Text = $"{addListElementCount} total";
+            if (BACnetRemoveListElementLabel != null)
+                BACnetRemoveListElementLabel.Text = $"{removeListElementCount} total";
+            if (BACnetReadRangeLabel != null)
+                BACnetReadRangeLabel.Text = $"{readRangeCount} total";
+            if (BACnetGetEventInfoLabel != null)
+                BACnetGetEventInfoLabel.Text = $"{getEventInfoCount} total";
+
+            if (BACnetErrorLabel != null)
+                BACnetErrorLabel.Text = $"{errorCount} total";
+            if (BACnetRejectLabel != null)
+                BACnetRejectLabel.Text = $"{rejectCount} total";
+            if (BACnetAbortLabel != null)
+                BACnetAbortLabel.Text = $"{abortCount} total";
+            if (BACnetReinitDeviceLabel != null)
+                BACnetReinitDeviceLabel.Text = $"{reinitDeviceCount} total";
         }
 
         private void UpdateBACnetServicesAnalysis(List<NetworkPacket> filteredPackets)
@@ -584,89 +685,55 @@ namespace BACnetPana.UI
             if (BACnetServicesAnalysisBorder != null)
                 BACnetServicesAnalysisBorder.Visibility = Visibility.Visible;
 
-            var readWriteCount = 0;
+            var readPropertyCount = 0;
+            var writePropertyCount = 0;
             var confirmedServicesCount = 0;
-            var fastResponseCount = 0;
+            var unconfirmedServicesCount = 0;
             var errorCount = 0;
-            var networkLayerMsgCount = 0;
-            var segmentedFlagCount = 0;
 
             foreach (var packet in bacnetPackets)
             {
-                var hasReadWrite = false;
-                var isConfirmed = false;
-                var hasError = false;
-                var hasNetworkLayer = false;
-                var hasSegmented = false;
-                double? timeDelta = null;
-
                 if (packet.Details != null)
                 {
-                    foreach (var detail in packet.Details)
+                    // Service-Typ erkennen
+                    if (packet.Details.TryGetValue("BACnet Service", out var service))
                     {
-                        var key = detail.Key?.ToLower() ?? string.Empty;
-                        var rawValue = detail.Value ?? string.Empty;
-                        var value = rawValue.ToLower();
+                        var svc = (service ?? "").ToLower();
 
-                        if (!hasReadWrite && (key.Contains("bacnet.service") || value.Contains("bacnet.service") || key.Contains("readproperty") || value.Contains("readproperty") || key.Contains("writeproperty") || value.Contains("writeproperty")))
-                        {
-                            if (value.Contains("8") || value.Contains("0") || key.Contains("readproperty") || value.Contains("readproperty") || key.Contains("writeproperty") || value.Contains("writeproperty"))
-                                hasReadWrite = true;
-                        }
+                        // Read/Write Property
+                        if (svc.Contains("readproperty") || svc.Contains("read-property") || svc.Contains("read property"))
+                            readPropertyCount++;
 
-                        if (!isConfirmed && (key.Contains("confirmed_service") || value.Contains("confirmed_service") || key.Contains("confirmed service") || value.Contains("confirmed service")))
-                            isConfirmed = true;
+                        if (svc.Contains("writeproperty") || svc.Contains("write-property") || svc.Contains("write property"))
+                            writePropertyCount++;
 
-                        if (!hasError && (key.Contains("reject") || value.Contains("reject") || key.Contains("abort") || value.Contains("abort") || key.Contains("error") || value.Contains("error")))
-                            hasError = true;
+                        // Confirmed vs Unconfirmed
+                        if (svc.Contains("confirmed"))
+                            confirmedServicesCount++;
 
-                        if (!hasNetworkLayer && (key.Contains("network_layer_message") || key.Contains("network layer message") || value.Contains("network_layer_message") || value.Contains("network layer message")))
-                        {
-                            if (value.Contains("1") || value == "true")
-                                hasNetworkLayer = true;
-                        }
+                        if (svc.Contains("unconfirmed") || svc.Contains("i-am") || svc.Contains("who-is"))
+                            unconfirmedServicesCount++;
 
-                        if (!hasSegmented && (key.Contains("segmented") || value.Contains("segmented")))
-                        {
-                            if (value.Contains("1") || value == "true")
-                                hasSegmented = true;
-                        }
-
-                        if (!timeDelta.HasValue && (key.Contains("time_delta") || key.Contains("frame.time_delta") || value.Contains("time_delta")))
-                        {
-                            if (double.TryParse(rawValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsedDelta) ||
-                                double.TryParse(rawValue, NumberStyles.Any, CultureInfo.GetCultureInfo("de-DE"), out parsedDelta))
-                                timeDelta = parsedDelta;
-                        }
+                        // Error Detection
+                        if (svc.Contains("error") || svc.Contains("reject") || svc.Contains("abort"))
+                            errorCount++;
                     }
                 }
-
-                if (hasReadWrite)
-                    readWriteCount++;
-                if (isConfirmed)
-                    confirmedServicesCount++;
-                if (isConfirmed && timeDelta.HasValue && timeDelta.Value < 0.2)
-                    fastResponseCount++;
-                if (hasError)
-                    errorCount++;
-                if (hasNetworkLayer)
-                    networkLayerMsgCount++;
-                if (hasSegmented)
-                    segmentedFlagCount++;
             }
 
+            // Update Labels
             if (BACnetReadWriteLabel != null)
-                BACnetReadWriteLabel.Text = readWriteCount.ToString();
+                BACnetReadWriteLabel.Text = (readPropertyCount + writePropertyCount).ToString();
             if (BACnetConfirmedServLabel != null)
                 BACnetConfirmedServLabel.Text = confirmedServicesCount.ToString();
             if (BACnetFastResponseLabel != null)
-                BACnetFastResponseLabel.Text = fastResponseCount.ToString();
+                BACnetFastResponseLabel.Text = readPropertyCount.ToString();
             if (BACnetErrorsLabel != null)
                 BACnetErrorsLabel.Text = errorCount.ToString();
             if (BACnetNetworkMsgLabel != null)
-                BACnetNetworkMsgLabel.Text = networkLayerMsgCount.ToString();
+                BACnetNetworkMsgLabel.Text = unconfirmedServicesCount.ToString();
             if (BACnetSegmentedFlagLabel != null)
-                BACnetSegmentedFlagLabel.Text = segmentedFlagCount.ToString();
+                BACnetSegmentedFlagLabel.Text = writePropertyCount.ToString();
         }
 
         private List<DataPoint> CalculatePacketsPerSecond(List<NetworkPacket> packets, DateTime startTime, DateTime endTime)

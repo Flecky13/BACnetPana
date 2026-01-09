@@ -14,14 +14,17 @@ namespace BACnetPana.Models
         public int Resets { get; set; }
         public int IcmpUnreachable { get; set; }
         public int LostSegments { get; set; }
+        public int OutOfOrder { get; set; }
+        public int WindowSizeZero { get; set; }
+        public int KeepAlive { get; set; }
 
         /// <summary>
-        /// Summe aller als Paketverlust gewerteten Ereignisse.
+        /// Summe aller als Fehler gewerteten Ereignisse.
         /// </summary>
         public int GetLossEventsTotal()
         {
-            // Inklusive Resets und verlorener Segmente gemäß Wunsch
-            return Retransmissions + FastRetransmissions + DuplicateAcks + IcmpUnreachable + Resets + LostSegments;
+            // Alle TCP-Fehler zusammen
+            return Retransmissions + FastRetransmissions + DuplicateAcks + IcmpUnreachable + Resets + LostSegments + OutOfOrder + WindowSizeZero + KeepAlive;
         }
 
         /// <summary>
