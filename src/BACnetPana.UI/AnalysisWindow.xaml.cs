@@ -523,69 +523,55 @@ namespace BACnetPana.UI
             var subscribeCOVPropCount = 0; // 28
             var confCOVNotifCount = 0;   // 1 (Confirmed)
             var confEventNotifCount = 0; // 2 (Confirmed)
-            var addListElementCount = 0; // 8 (Confirmed)
-            var removeListElementCount = 0; // 9 (Confirmed)
-            var readRangeCount = 0;      // 26
-            var getEventInfoCount = 0;   // 29
             var errorCount = 0;          // 5 (Error)
-            var rejectCount = 0;         // 6 (Reject)
-            var abortCount = 0;          // 7 (Abort)
-            var reinitDeviceCount = 0;   // 20
             var totalBytes = 0;
 
             foreach (var packet in bacnetPackets)
             {
                 if (packet.Details != null)
                 {
-                    // Service Code erkennen (TShark liefert numerische Codes)
-                    if (packet.Details.TryGetValue("BACnet Service", out var service))
-                    {
-                        var svc = (service ?? "").Trim();
-                        if (int.TryParse(svc, out var serviceCode))
-                        {
-                            // Prüfe ob Confirmed oder Unconfirmed
-                            bool isConfirmed = false;
-                            if (packet.Details.TryGetValue("BACnet Type", out var typeConfirmed))
-                            {
-                                isConfirmed = typeConfirmed?.Contains("Confirmed") == true;
-                            }
+                    var confirmedCode = GetServiceCode(packet.Details, "BACnet Confirmed Service Code", "BACnet Confirmed Service");
+                    var unconfirmedCode = GetServiceCode(packet.Details, "BACnet Unconfirmed Service Code", "BACnet Unconfirmed Service");
 
-                            // Service-Codes verarbeiten (depends on Confirmed/Unconfirmed)
-                            if (isConfirmed)
-                            {
-                                // Confirmed Services
-                                switch (serviceCode)
-                                {
-                                    case 1: confCOVNotifCount++; break;      // ConfirmedCOVNotification
-                                    case 2: confEventNotifCount++; break;    // ConfirmedEventNotification
-                                    case 5: subscribeCOVCount++; break;      // SubscribeCOV
-                                    case 8: addListElementCount++; break;    // AddListElement
-                                    case 9: removeListElementCount++; break; // RemoveListElement
-                                    case 12: readPropertyCount++; break;     // ReadProperty
-                                    case 14: readPropertyMultCount++; break; // ReadPropertyMultiple
-                                    case 15: writePropertyCount++; break;    // WriteProperty
-                                    case 16: writePropertyMultCount++; break; // WritePropertyMultiple
-                                    case 20: reinitDeviceCount++; break;     // ReinitializeDevice
-                                    case 26: readRangeCount++; break;        // ReadRange
-                                    case 28: subscribeCOVPropCount++; break; // SubscribeCOVProperty
-                                    case 29: getEventInfoCount++; break;     // GetEventInformation
-                                }
-                            }
+                    // Fallback: altes Feld verwenden, Typ entscheidet confirmed/unconfirmed
+                    if (!confirmedCode.HasValue && !unconfirmedCode.HasValue)
+                    {
+                        var fallbackCode = GetServiceCode(packet.Details, "BACnet Service Code", "BACnet Service");
+                        if (fallbackCode.HasValue)
+                        {
+                            if (packet.Details.TryGetValue("BACnet Type", out var typeValue) && (typeValue?.Contains("Confirmed") == true))
+                                confirmedCode = fallbackCode;
                             else
-                            {
-                                // Unconfirmed Services
-                                switch (serviceCode)
-                                {
-                                    case 0: iAmCount++; break;          // I-Am
-                                    case 1: iHaveCount++; break;        // I-Have
-                                    case 2: simpleAckCount++; break;    // SimpleACK
-                                    case 3: complexAckCount++; break;   // ComplexACK
-                                    case 5: errorCount++; break;        // Error
-                                    case 6: rejectCount++; break;       // Reject
-                                    case 7: whoHasCount++; break;       // Who-Has
-                                    case 8: whoIsCount++; break;        // Who-Is
-                                }
-                            }
+                                unconfirmedCode = fallbackCode;
+                        }
+                    }
+
+                    if (confirmedCode.HasValue)
+                    {
+                        switch (confirmedCode.Value)
+                        {
+                            case 1: confCOVNotifCount++; break;      // ConfirmedCOVNotification
+                            case 2: confEventNotifCount++; break;    // ConfirmedEventNotification
+                            case 5: subscribeCOVCount++; break;      // SubscribeCOV
+                            case 12: readPropertyCount++; break;     // ReadProperty
+                            case 14: readPropertyMultCount++; break; // ReadPropertyMultiple
+                            case 15: writePropertyCount++; break;    // WriteProperty
+                            case 16: writePropertyMultCount++; break; // WritePropertyMultiple
+                            case 28: subscribeCOVPropCount++; break; // SubscribeCOVProperty
+                        }
+                    }
+
+                    if (unconfirmedCode.HasValue)
+                    {
+                        switch (unconfirmedCode.Value)
+                        {
+                            case 0: iAmCount++; break;          // I-Am
+                            case 1: iHaveCount++; break;        // I-Have
+                            case 2: simpleAckCount++; break;    // SimpleACK
+                            case 3: complexAckCount++; break;   // ComplexACK
+                            case 5: errorCount++; break;        // Error
+                            case 7: whoHasCount++; break;       // Who-Has
+                            case 8: whoIsCount++; break;        // Who-Is
                         }
                     }
 
@@ -648,23 +634,8 @@ namespace BACnetPana.UI
             if (BACnetConfEventNotifLabel != null)
                 BACnetConfEventNotifLabel.Text = $"{confEventNotifCount} total";
 
-            if (BACnetAddListElementLabel != null)
-                BACnetAddListElementLabel.Text = $"{addListElementCount} total";
-            if (BACnetRemoveListElementLabel != null)
-                BACnetRemoveListElementLabel.Text = $"{removeListElementCount} total";
-            if (BACnetReadRangeLabel != null)
-                BACnetReadRangeLabel.Text = $"{readRangeCount} total";
-            if (BACnetGetEventInfoLabel != null)
-                BACnetGetEventInfoLabel.Text = $"{getEventInfoCount} total";
-
             if (BACnetErrorLabel != null)
                 BACnetErrorLabel.Text = $"{errorCount} total";
-            if (BACnetRejectLabel != null)
-                BACnetRejectLabel.Text = $"{rejectCount} total";
-            if (BACnetAbortLabel != null)
-                BACnetAbortLabel.Text = $"{abortCount} total";
-            if (BACnetReinitDeviceLabel != null)
-                BACnetReinitDeviceLabel.Text = $"{reinitDeviceCount} total";
         }
 
         private void UpdateBACnetServicesAnalysis(List<NetworkPacket> filteredPackets)
@@ -685,53 +656,77 @@ namespace BACnetPana.UI
             if (BACnetServicesAnalysisBorder != null)
                 BACnetServicesAnalysisBorder.Visibility = Visibility.Visible;
 
-            var readPropertyCount = 0;
-            var writePropertyCount = 0;
-            var confirmedServicesCount = 0;
             var unconfirmedServicesCount = 0;
             var errorCount = 0;
+            var readPropertyCount = 0;
+            var writePropertyCount = 0;
 
             foreach (var packet in bacnetPackets)
             {
-                if (packet.Details != null)
+                if (packet.Details == null)
+                    continue;
+
+                var confirmedCode = GetServiceCode(packet.Details, "BACnet Confirmed Service Code", "BACnet Confirmed Service");
+                var unconfirmedCode = GetServiceCode(packet.Details, "BACnet Unconfirmed Service Code", "BACnet Unconfirmed Service");
+
+                if (!confirmedCode.HasValue && !unconfirmedCode.HasValue)
                 {
-                    // Service-Typ erkennen
-                    if (packet.Details.TryGetValue("BACnet Service", out var service))
+                    var fallbackCode = GetServiceCode(packet.Details, "BACnet Service Code", "BACnet Service");
+                    if (fallbackCode.HasValue)
                     {
-                        var svc = (service ?? "").ToLower();
-
-                        // Read/Write Property
-                        if (svc.Contains("readproperty") || svc.Contains("read-property") || svc.Contains("read property"))
-                            readPropertyCount++;
-
-                        if (svc.Contains("writeproperty") || svc.Contains("write-property") || svc.Contains("write property"))
-                            writePropertyCount++;
-
-                        // Confirmed vs Unconfirmed
-                        if (svc.Contains("confirmed"))
-                            confirmedServicesCount++;
-
-                        if (svc.Contains("unconfirmed") || svc.Contains("i-am") || svc.Contains("who-is"))
-                            unconfirmedServicesCount++;
-
-                        // Error Detection
-                        if (svc.Contains("error") || svc.Contains("reject") || svc.Contains("abort"))
-                            errorCount++;
+                        if (packet.Details.TryGetValue("BACnet Type", out var typeValue) && (typeValue?.Contains("Confirmed") == true))
+                            confirmedCode = fallbackCode;
+                        else
+                            unconfirmedCode = fallbackCode;
                     }
+                }
+
+                // Unconfirmed Zählung
+                if (unconfirmedCode.HasValue)
+                    unconfirmedServicesCount++;
+
+                // Read/Write Property anhand Codes (Fallback: Textsuche)
+                var codeForProperty = confirmedCode ?? unconfirmedCode;
+                if (codeForProperty.HasValue)
+                {
+                    switch (codeForProperty.Value)
+                    {
+                        case 12:
+                        case 14:
+                            readPropertyCount++;
+                            break;
+                        case 15:
+                        case 16:
+                            writePropertyCount++;
+                            break;
+                    }
+                }
+                else if (packet.Details.TryGetValue("BACnet Service", out var serviceText))
+                {
+                    var svc = (serviceText ?? "").ToLower();
+                    if (svc.Contains("readproperty") || svc.Contains("read-property") || svc.Contains("read property"))
+                        readPropertyCount++;
+                    if (svc.Contains("writeproperty") || svc.Contains("write-property") || svc.Contains("write property"))
+                        writePropertyCount++;
+                    if (svc.Contains("error") || svc.Contains("reject") || svc.Contains("abort"))
+                        errorCount++;
+                }
+
+                // Fehlerhafte Dienste per Code erfassen
+                if (unconfirmedCode.HasValue)
+                {
+                    if (unconfirmedCode.Value == 5 || unconfirmedCode.Value == 6 || unconfirmedCode.Value == 7)
+                        errorCount++;
                 }
             }
 
             // Update Labels
-            if (BACnetReadWriteLabel != null)
-                BACnetReadWriteLabel.Text = (readPropertyCount + writePropertyCount).ToString();
-            if (BACnetConfirmedServLabel != null)
-                BACnetConfirmedServLabel.Text = confirmedServicesCount.ToString();
-            if (BACnetFastResponseLabel != null)
-                BACnetFastResponseLabel.Text = readPropertyCount.ToString();
             if (BACnetErrorsLabel != null)
                 BACnetErrorsLabel.Text = errorCount.ToString();
             if (BACnetNetworkMsgLabel != null)
                 BACnetNetworkMsgLabel.Text = unconfirmedServicesCount.ToString();
+            if (BACnetFastResponseLabel != null)
+                BACnetFastResponseLabel.Text = readPropertyCount.ToString();
             if (BACnetSegmentedFlagLabel != null)
                 BACnetSegmentedFlagLabel.Text = writePropertyCount.ToString();
         }
@@ -793,6 +788,39 @@ namespace BACnetPana.UI
                 StartTimeSlider.Value = EndTimeSlider.Value;
             }
             DebounceUpdateChart();
+        }
+
+        private static int? GetServiceCode(Dictionary<string, string> details, string codeKey, string valueKey)
+        {
+            if (details.TryGetValue(codeKey, out var codeStr))
+            {
+                if (int.TryParse(codeStr, out var parsedCode))
+                    return parsedCode;
+            }
+
+            if (details.TryGetValue(valueKey, out var valueStr))
+            {
+                if (TryParseServiceCode(valueStr, out var parsedCode))
+                    return parsedCode;
+            }
+
+            return null;
+        }
+
+        private static bool TryParseServiceCode(string? serviceValue, out int serviceCode)
+        {
+            serviceCode = -1;
+            if (string.IsNullOrWhiteSpace(serviceValue))
+                return false;
+
+            if (int.TryParse(serviceValue.Trim(), out serviceCode))
+                return true;
+
+            var digits = new string(serviceValue.Where(char.IsDigit).ToArray());
+            if (!string.IsNullOrEmpty(digits) && int.TryParse(digits, out serviceCode))
+                return true;
+
+            return false;
         }
 
         private void DebounceUpdateChart()

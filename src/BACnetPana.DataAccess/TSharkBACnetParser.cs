@@ -591,8 +591,33 @@ namespace BACnetPana.DataAccess
             if (!string.IsNullOrEmpty(serviceType))
                 packet.Details["BACnet Type"] = serviceType;
 
+            // Speichere Services getrennt nach confirmed/unconfirmed und als Fallback kombiniert
+            if (!string.IsNullOrEmpty(confirmedService))
+            {
+                packet.Details["BACnet Confirmed Service"] = confirmedService;
+                if (TryParseServiceCode(confirmedService, out var confirmedCode))
+                {
+                    packet.Details["BACnet Confirmed Service Code"] = confirmedCode.ToString();
+                }
+            }
+
+            if (!string.IsNullOrEmpty(unconfirmedService))
+            {
+                packet.Details["BACnet Unconfirmed Service"] = unconfirmedService;
+                if (TryParseServiceCode(unconfirmedService, out var unconfirmedCode))
+                {
+                    packet.Details["BACnet Unconfirmed Service Code"] = unconfirmedCode.ToString();
+                }
+            }
+
             if (!string.IsNullOrEmpty(service))
+            {
                 packet.Details["BACnet Service"] = service;
+                if (TryParseServiceCode(service, out var serviceCode))
+                {
+                    packet.Details["BACnet Service Code"] = serviceCode.ToString();
+                }
+            }
 
             if (!string.IsNullOrEmpty(invokeId))
                 packet.Details["Invoke ID"] = invokeId;
@@ -646,6 +671,24 @@ namespace BACnetPana.DataAccess
         {
             TryGetStringField(layers, fieldName, out string? value);
             return value ?? string.Empty;
+        }
+
+        private bool TryParseServiceCode(string? serviceValue, out int serviceCode)
+        {
+            serviceCode = -1;
+            if (string.IsNullOrWhiteSpace(serviceValue))
+                return false;
+
+            // Direkte Zahl versuchen
+            if (int.TryParse(serviceValue.Trim(), out serviceCode))
+                return true;
+
+            // Extrahiere erste Ziffernfolge (z.B. "readProperty(12)" -> 12)
+            var digits = new string(serviceValue.Where(char.IsDigit).ToArray());
+            if (!string.IsNullOrEmpty(digits) && int.TryParse(digits, out serviceCode))
+                return true;
+
+            return false;
         }
 
         private bool TryGetStringField(JsonElement layers, string fieldName, out string? value)
