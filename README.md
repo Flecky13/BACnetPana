@@ -1,5 +1,7 @@
 # BACnetPana - Netzwerk-Analyse Software
 
+![Alt text](Images/toolicon.png)
+
 ---
 
 ## 📋 Übersicht
@@ -13,7 +15,6 @@
 - ✅ **BACnet-Datenbasis**: Automatische Erkennung von Devices, Instanznummern und Vendor-IDs
 - ✅ **Echtzeit-Statistiken**: Automatische Berechnung von Protokoll-, IP- und Port-Statistiken
 - ✅ **Grafische Visualisierung**: Diagramme und Statistik-Übersicht
-- ✅ **MVVM-Architektur**: Moderne, wartbare Applikationsstruktur
 - ✅ **Automatischer Fallback**: Funktioniert auch ohne TShark (eingeschränkt)
 
 ---
