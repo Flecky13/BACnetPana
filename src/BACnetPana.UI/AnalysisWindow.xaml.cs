@@ -1005,63 +1005,198 @@ namespace BACnetPana.UI
             if (bacnetPackets.Count == 0)
             {
                 // Keine BACnet-Pakete -> Bereich ausblenden
+                if (BACnetTopReadPropertyBorder != null)
+                    BACnetTopReadPropertyBorder.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            // Zähle ReadProperty/WriteProperty-Zugriffe pro BACnet-Instanz
-            var propertyAccessByInstance = new Dictionary<string, int>();
+            // Aggregiere bestätigte ReadProperty-Anfragen (Service-Code 12)
+            var readPropertyGroups = new Dictionary<string, int>();
+            int totalReadPropertyCount = 0;
 
             foreach (var packet in bacnetPackets)
             {
                 if (packet.Details == null || packet.Details.Count == 0)
                     continue;
 
+                // Nur Confirmed-REQ: Erkenne über vorhandenes Confirmed-Feld oder Typ-Text
+                var isConfirmedReq = false;
+                if (packet.Details.ContainsKey("BACnet Confirmed Service"))
+                {
+                    isConfirmedReq = true;
+                }
+                else if (packet.Details.TryGetValue("BACnet Type", out var typeValue) && !string.IsNullOrWhiteSpace(typeValue))
+                {
+                    var typeLower = typeValue.ToLowerInvariant();
+                    if (typeLower.Contains("confirmed"))
+                        isConfirmedReq = true;
+                }
+
+                if (!isConfirmedReq)
+                    continue;
+
+                // Nur ReadProperty (Service-Code 12)
+                var confirmedCode = GetServiceCode(packet.Details, "BACnet Confirmed Service Code", "BACnet Confirmed Service");
+                int? serviceCode = confirmedCode;
+
+                if (!serviceCode.HasValue)
+                {
+                    // Fallback: kombiniertes Feld
+                    serviceCode = GetServiceCode(packet.Details, "BACnet Service Code", "BACnet Service");
+                }
+
+                var isReadProperty = serviceCode.HasValue && serviceCode.Value == 12;
+                if (!isReadProperty && packet.Details.TryGetValue("BACnet Confirmed Service", out var confServiceText))
+                {
+                    var svcLower = (confServiceText ?? string.Empty).ToLowerInvariant();
+                    if (svcLower.Contains("readproperty") || svcLower.Contains("read property") || svcLower.Contains("read-property"))
+                        isReadProperty = true;
+                }
+
+                if (!isReadProperty)
+                    continue; // nur ReadProperty Confirmed-REQ
+
+                totalReadPropertyCount++;
+
                 var sourceIp = string.IsNullOrWhiteSpace(packet.SourceIp) ? "Unbekannt" : packet.SourceIp;
-                var propertyCount = 0;
+                var destIp = string.IsNullOrWhiteSpace(packet.DestinationIp) ? "Unbekannt" : packet.DestinationIp;
 
-                // Zähle Property-Zugriffe in diesem Paket
-                foreach (var detail in packet.Details)
+                packet.Details.TryGetValue("Object Type", out var objectType);
+                packet.Details.TryGetValue("Instance Number", out var instanceNumber);
+                packet.Details.TryGetValue("Property", out var propertyId);
+
+                objectType = string.IsNullOrWhiteSpace(objectType) ? "unbekannt" : objectType;
+                instanceNumber = string.IsNullOrWhiteSpace(instanceNumber) ? "?" : instanceNumber;
+                propertyId = string.IsNullOrWhiteSpace(propertyId) ? "property" : propertyId;
+
+                // Schlüssel: Wer → Wohin | Was
+                var who = $"{sourceIp} → {destIp}";
+                var what = $"{objectType},{instanceNumber} {propertyId}";
+                var key = $"{who} | {what}";
+
+                if (!readPropertyGroups.ContainsKey(key))
+                    readPropertyGroups[key] = 0;
+                readPropertyGroups[key]++;
+            }
+
+            // Top 10 nach Häufigkeit (ohne Repeat-Schwelle)
+            var topReadProps = readPropertyGroups
+                .Select(kv => new { Label = kv.Key, Count = kv.Value })
+                .OrderByDescending(x => x.Count)
+                .Take(10)
+                .ToList();
+
+            if (topReadProps.Count == 0)
+            {
+                // Nichts zu zeigen
+                if (BACnetTopReadPropertyBorder != null)
+                    BACnetTopReadPropertyBorder.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            if (BACnetTopReadPropertyBorder != null)
+                BACnetTopReadPropertyBorder.Visibility = Visibility.Visible;
+
+            // Rate pro Minute über gefilterten Zeitraum
+            double durationSeconds = 1;
+            if (filteredPackets.Count >= 2)
+            {
+                var minTs = filteredPackets.Min(p => p.Timestamp);
+                var maxTs = filteredPackets.Max(p => p.Timestamp);
+                durationSeconds = Math.Max(1e-6, (maxTs - minTs).TotalSeconds);
+            }
+            var durationMinutes = durationSeconds / 60.0;
+            var perMinute = durationMinutes > 0 ? totalReadPropertyCount / durationMinutes : 0;
+
+            if (TopReadPropertyCountLabel != null)
+                TopReadPropertyCountLabel.Text = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", totalReadPropertyCount, perMinute);
+
+            // Erweitere topReadProps um DisplayValue für jeden Balken
+            var topReadPropsWithRate = topReadProps.Select(x => new
+            {
+                x.Label,
+                x.Count,
+                DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", x.Count, durationMinutes > 0 ? x.Count / durationMinutes : 0)
+            }).ToList();
+
+            var barHeight = 22;
+            var desiredHeight = Math.Max(10, topReadPropsWithRate.Count) * barHeight;
+
+            var model = new PlotModel
+            {
+                Title = "Top ReadProperty Wiederholungen",
+                Background = OxyColors.White
+            };
+
+            var categoryAxis = new CategoryAxis
+            {
+                Position = AxisPosition.Left,
+                ItemsSource = topReadPropsWithRate,
+                LabelField = "Label",
+                GapWidth = 0.5
+            };
+            model.Axes.Add(categoryAxis);
+
+            var valueAxis = new LinearAxis
+            {
+                Position = AxisPosition.Bottom,
+                Title = "Anzahl Anfragen",
+                MinimumPadding = 0,
+                AbsoluteMinimum = 0,
+                MajorGridlineStyle = LineStyle.Solid,
+                MinorGridlineStyle = LineStyle.Dot,
+                MajorGridlineColor = OxyColor.FromRgb(220, 220, 220),
+                MinorGridlineColor = OxyColor.FromRgb(240, 240, 240)
+            };
+            model.Axes.Add(valueAxis);
+
+            if (ReadPropertyTopChart != null)
+            {
+                ReadPropertyTopChart.Height = desiredHeight;
+            }
+
+            var series = new BarSeries
+            {
+                FillColor = OxyColor.FromRgb(111, 66, 193), // #6f42c1
+                StrokeColor = OxyColor.FromRgb(90, 54, 157),
+                StrokeThickness = 1,
+                BarWidth = 0.6,
+                LabelPlacement = LabelPlacement.Inside,
+                LabelMargin = 2,
+                TextColor = OxyColors.White
+            };
+
+            // Füge BarItems manuell hinzu mit Label
+            for (int i = 0; i < topReadPropsWithRate.Count; i++)
+            {
+                var item = topReadPropsWithRate[i];
+                var barItem = new BarItem
                 {
-                    var key = detail.Key?.ToLower() ?? string.Empty;
-                    var valueLower = (detail.Value ?? string.Empty).ToLower();
+                    Value = item.Count,
+                    CategoryIndex = i
+                };
+                series.Items.Add(barItem);
 
-                    // Erkenne ReadProperty/WriteProperty
-                    if (key.Contains("readproperty") || valueLower.Contains("readproperty") ||
-                        (key.Contains("read") && key.Contains("property")) ||
-                        (valueLower.Contains("read") && valueLower.Contains("property")))
-                    {
-                        propertyCount++;
-                    }
-                    else if (key.Contains("writeproperty") || valueLower.Contains("writeproperty") ||
-                             (key.Contains("write") && key.Contains("property")) ||
-                             (valueLower.Contains("write") && valueLower.Contains("property")))
-                    {
-                        propertyCount++;
-                    }
-                }
-
-                if (propertyCount > 0)
+                // Füge Text-Annotation für das Label hinzu
+                var annotation = new OxyPlot.Annotations.TextAnnotation
                 {
-                    // Erstelle Label mit Datenbasis-Infos
-                    var instance = _bacnetDb.GetInstanceForIp(sourceIp);
-                    var deviceName = _bacnetDb.IpToDeviceName.TryGetValue(sourceIp, out var name) ? name : null;
+                    Text = item.DisplayValue,
+                    TextPosition = new DataPoint(item.Count / 2.0, i),
+                    TextHorizontalAlignment = OxyPlot.HorizontalAlignment.Center,
+                    TextVerticalAlignment = OxyPlot.VerticalAlignment.Middle,
+                    TextColor = OxyColors.White,
+                    Stroke = OxyColors.Transparent,
+                    StrokeThickness = 0
+                };
+                model.Annotations.Add(annotation);
+            }
 
-                    string label;
-                    if (!string.IsNullOrEmpty(instance))
-                    {
-                        label = string.IsNullOrEmpty(deviceName)
-                            ? $"{sourceIp} (ID: {instance})"
-                            : $"{sourceIp} (ID: {instance}, {deviceName})";
-                    }
-                    else
-                    {
-                        label = sourceIp;
-                    }
+            model.Series.Add(series);
 
-                    if (!propertyAccessByInstance.ContainsKey(label))
-                        propertyAccessByInstance[label] = 0;
-                    propertyAccessByInstance[label] += propertyCount;
-                }
+            if (ReadPropertyTopChart != null)
+            {
+                ReadPropertyTopChart.Model = model;
+                ReadPropertyTopChart.Controller = _noWheelController;
             }
         }
 

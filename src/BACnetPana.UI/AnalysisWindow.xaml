@@ -716,6 +716,28 @@
                                     <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Hinweis: nicht ermittelbar = kein I-Am oder I-Have von diesem Gerät empfangen" Margin="0,8,0,0" Foreground="#555" FontStyle="Italic" />
                                 </Grid>
                             </Border>
+
+                            <!-- BACnet Top ReadProperty Repeats Section -->
+                            <Border x:Name="BACnetTopReadPropertyBorder" Background="White" BorderBrush="#6f42c1" BorderThickness="2" Padding="15" Margin="0,8,0,0" MinHeight="280" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="ReadProperty (Top 10 Wiederholungen)" FontWeight="Bold" Margin="0,0,0,6"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TopReadPropertyCountLabel" Text="Einträge: 0" HorizontalAlignment="Right" FontWeight="Bold" Foreground="#6f42c1"/>
+
+                                    <oxy:PlotView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ReadPropertyTopChart" Height="240" Margin="0,6,0,0" PreviewMouseWheel="PlotView_PreviewMouseWheel" />
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Gruppiert nach Quelle → Ziel und Objekt,Instanz Eigenschaft" Margin="0,8,0,0" Foreground="#555" FontStyle="Italic" />
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
                 </StackPanel>
