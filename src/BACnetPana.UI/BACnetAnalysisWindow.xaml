@@ -1,0 +1,519 @@
+<Window x:Class="BACnetPana.UI.BACnetAnalysisWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:oxy="http://oxyplot.org/wpf"
+        Title="BACnet-Analyse" Height="700" Width="1100"
+        Background="#F0F0F0"
+        FontSize="12"
+        FontFamily="Segoe UI">
+    <DockPanel LastChildFill="True">
+        <!-- Toolbar -->
+        <Grid DockPanel.Dock="Top" Background="#2D2D2D" Height="56">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0">
+                <TextBlock x:Name="AnalysisTitleTextBlock"
+                           Text="Analyse der gefilterten Pakete (kein Filter)"
+                           Foreground="White" FontSize="16" FontWeight="Bold"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Main content -->
+        <Grid Margin="8">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Zusammenfassung -->
+            <Border Grid.Row="0" Background="White" BorderBrush="#E0E0E0" BorderThickness="1" Padding="10" Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Margin="6,0">
+                        <TextBlock Text="Pakete:" FontWeight="Bold"/>
+                        <TextBlock x:Name="PacketCountLabel" Text="0" FontSize="18" Foreground="#28A745" FontWeight="Bold"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Margin="6,0">
+                        <TextBlock Text="Gesamtgröße:" FontWeight="Bold"/>
+                        <TextBlock x:Name="TotalSizeLabel" Text="0 B" FontSize="18" Foreground="#28A745" FontWeight="Bold"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Margin="6,0">
+                        <TextBlock Text="Zeitspanne:" FontWeight="Bold"/>
+                        <TextBlock x:Name="TimeSpanLabel" Text="0 s" FontSize="18" Foreground="#28A745" FontWeight="Bold"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="3" Margin="6,0">
+                        <TextBlock Text="Protokolle:" FontWeight="Bold"/>
+                        <TextBlock x:Name="ProtocolCountLabel" Text="0" FontSize="18" Foreground="#28A745" FontWeight="Bold"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="4" Margin="6,0">
+                        <TextBlock Text="Startzeit:" FontWeight="Bold"/>
+                        <TextBlock x:Name="SummaryStartDateTimeLabel" Text="—" FontSize="14" Foreground="#28A745" FontWeight="SemiBold"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="5" Margin="6,0">
+                        <TextBlock Text="Endzeit:" FontWeight="Bold"/>
+                        <TextBlock x:Name="SummaryEndDateTimeLabel" Text="—" FontSize="14" Foreground="#28A745" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <!-- Zeitbereich -->
+            <Border Grid.Row="1" Background="#F9F9F9" BorderBrush="#CCCCCC" BorderThickness="1" Padding="10" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock Text="Zeitbereich (für BACnet-Analysen)" FontWeight="Bold" Margin="0,0,0,6"/>
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="Start:" FontWeight="Bold" Margin="0,0,8,0"/>
+                        <Slider Grid.Row="0" Grid.Column="1" x:Name="StartTimeSlider" Minimum="0" Maximum="1" ValueChanged="StartTimeSlider_ValueChanged"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" x:Name="StartTimeLabel" Text="0 s" FontWeight="Bold"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Ende:" FontWeight="Bold" Margin="0,6,8,0"/>
+                        <Slider Grid.Row="1" Grid.Column="1" x:Name="EndTimeSlider" Minimum="0" Maximum="1" ValueChanged="EndTimeSlider_ValueChanged"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" x:Name="EndTimeLabel" Text="0 s" FontWeight="Bold"/>
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Dauer:" FontWeight="Bold" Margin="0,6,8,0"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="DurationLabel" Text="Anzeigedauer: 0 s" FontWeight="Bold"/>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Vertical">
+                            <TextBlock Text="Start (absolut):" FontWeight="Bold"/>
+                            <TextBlock x:Name="StartDateTimeLabel" Text="—"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Vertical">
+                            <TextBlock Text="Ende (absolut):" FontWeight="Bold"/>
+                            <TextBlock x:Name="EndDateTimeLabel" Text="—"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- BACNET-ANALYSEN -->
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <Border x:Name="BACnetSectionBorder" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="2" Padding="8" Margin="0,0,0,8" CornerRadius="4" Visibility="Collapsed">
+                        <StackPanel>
+                            <TextBlock Text="🏢 BACNET-ANALYSEN" FontWeight="Bold" FontSize="14" Foreground="#28A745" Margin="0,0,0,8"/>
+
+                            <!-- BACnet-Datenbasis-Statistik -->
+                            <Border Background="#E8F5E9" BorderBrush="#4CAF50" BorderThickness="2" Padding="10" Margin="0,0,0,8" x:Name="BACnetDatabaseStatsBorder" Visibility="Collapsed">
+                                <StackPanel>
+                                    <TextBlock Text="📊 BACnet-Datenbasis" FontWeight="Bold" FontSize="13" Foreground="#2E7D32" Margin="0,0,0,6"/>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,0">
+                                            <TextBlock Text="Geräte gesamt:" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="BACnetDbTotalDevicesLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="0,0,16,0">
+                                            <TextBlock Text="Ohne Instanznummer:" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="BACnetDbNoInstanceCountLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                            <TextBlock Text="Vendor-IDs (unique):" FontWeight="SemiBold" Margin="0,0,6,0"/>
+                                            <TextBlock x:Name="BACnetDbVendorDistinctLabel" Text="0" Foreground="#1B5E20" FontWeight="Bold"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- BACnet Pakete/sek Chart -->
+                            <Border Background="White" BorderBrush="#CCCCCC" BorderThickness="1" Padding="0" Margin="0,0,0,8" MinHeight="260" x:Name="BACnetPacketsPerSecBorder" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Row="0" Text="BACnet-Pakete pro Sekunde" Background="#F5F5F5" Padding="10" FontWeight="Bold"/>
+                                    <oxy:PlotView Grid.Row="1" x:Name="BACnetTimeChart" Margin="10" PreviewMouseWheel="PlotView_PreviewMouseWheel"/>
+                                </Grid>
+                            </Border>
+
+                            <!-- BACnet Analysis Section (Counters) -->
+                            <Border x:Name="BACnetAnalysisBorder" Background="White" BorderBrush="#28A745" BorderThickness="2" Padding="15" Margin="0,0,0,8" MinHeight="280" Visibility="Collapsed">
+                                <StackPanel Orientation="Vertical">
+                                    <TextBlock Text="BACnet-Analyse" FontWeight="Bold" FontSize="13" Margin="0,0,0,12" Foreground="#28A745"/>
+
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <!-- Row 0: Broadcasts, SimpleACK, ComplexACK, WhoIs -->
+                                        <Border Grid.Row="0" Grid.Column="0" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="0,0,6,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Broadcasts:" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetBroadcastsLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="0" Grid.Column="1" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,0,6,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="SimpleACK (2):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetSimpleAckLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="0" Grid.Column="2" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,0,6,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="ComplexACK (3):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetComplexAckLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="0" Grid.Column="3" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,0,0,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Who-Is (8):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetWhoIsLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Row 1: Who-Has, I-Am, I-Have, ReadProperty -->
+                                        <Border Grid.Row="1" Grid.Column="0" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="0,6,6,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Who-Has (7):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetWhoHasLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="1" Grid.Column="1" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,6,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="I-Am (0):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetIAmLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="1" Grid.Column="2" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,6,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="I-Have (1):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetIHaveLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="1" Grid.Column="3" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,0,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="ReadProperty (12):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetReadPropertyLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Row 2: ReadPropertyMult, WriteProperty, WritePropertyMult, SubscribeCOV -->
+                                        <Border Grid.Row="2" Grid.Column="0" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="0,6,6,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="ReadPropertyMult (14):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetReadPropertyMultLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="2" Grid.Column="1" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,6,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="WriteProperty (15):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetWritePropertyLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="2" Grid.Column="2" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,6,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="WritePropertyMult (16):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetWritePropertyMultLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="2" Grid.Column="3" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,0,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="SubscribeCOV (5):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetSubscribeCOVLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Row 3: SubscribeCOVProp, ConfCOVNotif, ConfEventNotif, Error -->
+                                        <Border Grid.Row="3" Grid.Column="0" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="0,6,6,0" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="SubscribeCOVProp (28):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetSubscribeCOVPropLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="3" Grid.Column="1" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,6,0" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Conf.COVNotif (1):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetConfCOVNotifLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="3" Grid.Column="2" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,6,0" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Conf.EventNotif (2):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetConfEventNotifLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="3" Grid.Column="3" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,0,6" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Error (5):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetErrorLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <!-- Row 4: Fehler/Ablehnungen, Network Layer Msgs, Schnelle Responses, Segmented -->
+                                        <Border Grid.Row="4" Grid.Column="0" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="0,6,6,0" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Fehler/Ablehnungen:" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetErrorsLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="4" Grid.Column="1" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,6,0" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Network Layer Msgs:" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetNetworkMsgLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="4" Grid.Column="2" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,6,0" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Schnelle Responses (&lt;200ms):" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetFastResponseLabel" Text="0" FontSize="14" Foreground="#28A745" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+
+                                        <Border Grid.Row="4" Grid.Column="3" Background="#F0FFF4" BorderBrush="#28A745" BorderThickness="1" Padding="12" Margin="6,6,0,0" CornerRadius="4" MinHeight="50">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <TextBlock Text="Segmented == 1:" FontSize="11" FontWeight="Bold" Foreground="#555"/>
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2" x:Name="BACnetSegmentedFlagLabel" Text="0" FontSize="14" Foreground="#FFC107" FontWeight="Bold" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </Border>
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- BACnet Top Devices Section -->
+                            <Border x:Name="BACnetTopDevicesBorder" Background="White" BorderBrush="#17A2B8" BorderThickness="2" Padding="15" Margin="0,8,0,0" MinHeight="280" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="BACnet-Geräte (Top 10 Anfragen)" FontWeight="Bold" Margin="0,0,0,6"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TopDevicesCountLabel" Text="Geräte: 0" HorizontalAlignment="Right" FontWeight="Bold" Foreground="#17A2B8"/>
+
+                                    <oxy:PlotView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TopDevicesChart" Height="240" Margin="0,6,0,0" PreviewMouseWheel="PlotView_PreviewMouseWheel" />
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Hinweis: nicht ermittelbar = kein I-Am oder I-Have von diesem Gerät empfangen" Margin="0,8,0,0" Foreground="#555" FontStyle="Italic" />
+                                </Grid>
+                            </Border>
+
+                            <!-- BACnet Top ReadProperty Repeats Section -->
+                            <Border x:Name="BACnetTopReadPropertyBorder" Background="White" BorderBrush="#6f42c1" BorderThickness="2" Padding="15" Margin="0,8,0,0" MinHeight="280" Visibility="Collapsed">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="ReadProperty (Top 10 Wiederholungen)" FontWeight="Bold" Margin="0,0,0,6"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TopReadPropertyCountLabel" Text="Einträge: 0" HorizontalAlignment="Right" FontWeight="Bold" Foreground="#6f42c1"/>
+
+                                    <oxy:PlotView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="ReadPropertyTopChart" Height="240" Margin="0,6,0,0" PreviewMouseWheel="PlotView_PreviewMouseWheel" />
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Gruppiert nach Quelle → Ziel und Objekt,Instanz Eigenschaft" Margin="0,8,0,0" Foreground="#555" FontStyle="Italic" />
+                                </Grid>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
+</Window>

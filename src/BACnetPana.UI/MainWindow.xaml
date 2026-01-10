@@ -20,11 +20,17 @@
                             Click="OpenFileButton_Click">
                         <TextBlock Text="📁 PCAP öffnen" TextWrapping="NoWrap"/>
                     </Button>
-                    <Button x:Name="AnalysisButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="100"
+                    <Button x:Name="AnalysisTcpButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="140"
                             Background="#107C10" Foreground="White" FontSize="16"
-                            Click="AnalysisButton_Click"
+                            Click="AnalysisTcpButton_Click"
                             Visibility="{Binding IsAnalysisReady, Converter={StaticResource BooleanToVisibilityConverter}}">
-                        <TextBlock Text="🔄 Analysieren" TextWrapping="NoWrap"/>
+                        <TextBlock Text="🔄 Allg. Analyse" TextWrapping="NoWrap"/>
+                    </Button>
+                    <Button x:Name="AnalysisBacnetButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="160"
+                            Background="#28A745" Foreground="White" FontSize="16"
+                            Click="AnalysisBacnetButton_Click"
+                            Visibility="{Binding IsAnalysisReady, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <TextBlock Text="🏢 BACnet Analyse" TextWrapping="NoWrap"/>
                     </Button>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="10">

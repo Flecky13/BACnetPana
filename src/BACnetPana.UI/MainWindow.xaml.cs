@@ -183,7 +183,7 @@ namespace BACnetPana.UI
             MessageBox.Show(message, title, MessageBoxButton.OK, icon);
         }
 
-        private void AnalysisButton_Click(object sender, RoutedEventArgs e)
+        private void AnalysisTcpButton_Click(object sender, RoutedEventArgs e)
         {
             // Hole die gefilterten Pakete aus der DataGrid
             var view = CollectionViewSource.GetDefaultView(_viewModel.Packets);
@@ -204,9 +204,34 @@ namespace BACnetPana.UI
                 return;
             }
 
-            // Öffne Analyse-Fenster
+            // Öffne TCP-Analyse-Fenster (bestehendes Fenster)
             var analysisWindow = new AnalysisWindow(filteredPackets, _currentFilter, _viewModel.BacnetDatabase);
             analysisWindow.Show();
+        }
+
+        private void AnalysisBacnetButton_Click(object sender, RoutedEventArgs e)
+        {
+            var view = CollectionViewSource.GetDefaultView(_viewModel.Packets);
+            var filteredPackets = new List<NetworkPacket>();
+
+            foreach (var item in view)
+            {
+                if (item is NetworkPacket packet)
+                {
+                    filteredPackets.Add(packet);
+                }
+            }
+
+            if (filteredPackets.Count == 0)
+            {
+                MessageBox.Show("Keine Pakete zur Analyse vorhanden.", "Keine Daten",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Öffne neues BACnet-Analyse-Fenster
+            var bacnetWindow = new BACnetAnalysisWindow(filteredPackets, _currentFilter, _viewModel.BacnetDatabase);
+            bacnetWindow.Show();
         }
 
         private void ClearLogButton_Click(object sender, RoutedEventArgs e)
@@ -248,6 +273,10 @@ namespace BACnetPana.UI
                 // Update UI - kein Filter aktiv
                 ProtocolHeaderTextBlock.Text = "Protokolle (Hierarchisch)";
                 ProtocolHeaderTextBlock.Foreground = System.Windows.Media.Brushes.Black;
+
+                // BACnet-Button sichtbar, wenn keine Filterung oder Filter BACnet enthält
+                if (AnalysisBacnetButton != null)
+                    AnalysisBacnetButton.Visibility = Visibility.Visible;
             }
             else
             {
@@ -298,6 +327,16 @@ namespace BACnetPana.UI
                 // Update UI - Filter aktiv
                 ProtocolHeaderTextBlock.Text = "Protokolle (Hierarchisch) (gefiltert)";
                 ProtocolHeaderTextBlock.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(0, 120, 212)); // #0078D4 Blau
+
+                // BACnet-Button nur sichtbar, wenn Filter BACnet-relevant ist
+                // UDP enthält auch BACnet (Ports 47808-47823)!
+                bool isBacnetFilter = filterText.Equals("bacnet", StringComparison.OrdinalIgnoreCase) ||
+                                     filterText.Equals("bac", StringComparison.OrdinalIgnoreCase) ||
+                                     filterText.Equals("udp", StringComparison.OrdinalIgnoreCase) ||
+                                     (int.TryParse(filterText, out int port) && port >= 47808 && port <= 47823);
+
+                if (AnalysisBacnetButton != null)
+                    AnalysisBacnetButton.Visibility = isBacnetFilter ? Visibility.Visible : Visibility.Collapsed;
             }
         }
 

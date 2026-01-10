@@ -1,0 +1,44 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build BACnetPana",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build BACnetPana (TCP-only AnalysisWindow)",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build after BACnet removal",
+			"type": "shell",
+			"command": "dotnet",
+			"args": [
+				"build"
+			],
+			"isBackground": false,
+			"problemMatcher": [
+				"$msCompile"
+			],
+			"group": "build"
+		}
+	]
+}
