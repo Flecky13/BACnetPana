@@ -33,7 +33,7 @@ namespace BACnetPana.UI
             _bacnetDb = bacnetDatabase ?? new BACnetDatabase();
 
             // Debug: Log BACnet-Datenbank Status
-            System.Diagnostics.Debug.WriteLine($"AnalysisWindow: BACnetDatabase empfangen - IpToInstance: {_bacnetDb.IpToInstance?.Count ?? 0}, IpToDeviceName: {_bacnetDb.IpToDeviceName?.Count ?? 0}");
+            //System.Diagnostics.Debug.WriteLine($"AnalysisWindow: BACnetDatabase empfangen - IpToInstance: {_bacnetDb.IpToInstance?.Count ?? 0}, IpToDeviceName: {_bacnetDb.IpToDeviceName?.Count ?? 0}");
 
             ConfigurePlotController();
 
@@ -652,11 +652,11 @@ namespace BACnetPana.UI
                 BACnetTopDevicesBorder.Visibility = Visibility.Visible;
 
             // Debug: Ausgabe der BACnet-Datenbank
-            System.Diagnostics.Debug.WriteLine($"UpdateBACnetServicesAnalysis: IpToInstance enthält {_bacnetDb.IpToInstance.Count} Einträge");
-            foreach (var kvp in _bacnetDb.IpToInstance.Take(5))
-            {
-                System.Diagnostics.Debug.WriteLine($"  IP: {kvp.Key} -> Instance: {kvp.Value}");
-            }
+            //System.Diagnostics.Debug.WriteLine($"UpdateBACnetServicesAnalysis: IpToInstance enthält {_bacnetDb.IpToInstance.Count} Einträge");
+            //foreach (var kvp in _bacnetDb.IpToInstance.Take(5))
+            //{
+            //    System.Diagnostics.Debug.WriteLine($"  IP: {kvp.Key} -> Instance: {kvp.Value}");
+            //}
 
             // Aggregiere BACnet-Geräte nach Quell-IP (die meisten Anfragen)
             var deviceRequests = bacnetPackets
@@ -666,7 +666,7 @@ namespace BACnetPana.UI
                     Ip = g.Key,
                     Count = g.Count(),
                     // Versuche Instanznummer aus BACnet-Datenbank zu holen
-                    Instance = _bacnetDb.IpToInstance.ContainsKey(g.Key) ? _bacnetDb.IpToInstance[g.Key] : null
+                    Instance = _bacnetDb.IpToInstance.ContainsKey(g.Key) ? _bacnetDb.IpToInstance[g.Key] ?? string.Empty : string.Empty
                 })
                 .ToList();
 
@@ -685,11 +685,11 @@ namespace BACnetPana.UI
             }
 
             // Debug: Ausgabe der Top-Geräte vor Formatierung
-            System.Diagnostics.Debug.WriteLine($"Top-Geräte gefunden: {deviceRequests.Count}");
-            foreach (var dev in deviceRequests.Take(5))
-            {
-                System.Diagnostics.Debug.WriteLine($"  IP: {dev.Ip}, Count: {dev.Count}, Instance: {dev.Instance ?? "NULL"}");
-            }
+            //System.Diagnostics.Debug.WriteLine($"Top-Geräte gefunden: {deviceRequests.Count}");
+            //foreach (var dev in deviceRequests.Take(5))
+            //{
+            //    System.Diagnostics.Debug.WriteLine($"  IP: {dev.Ip}, Count: {dev.Count}, Instance: {dev.Instance ?? "NULL"}");
+            //}
 
             var formattedDevices = deviceRequests
                 .Select(x => new

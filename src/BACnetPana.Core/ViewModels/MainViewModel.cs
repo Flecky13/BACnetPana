@@ -190,24 +190,85 @@ namespace BACnetPana.Core.ViewModels
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    progressCallback("Phase 2/2", "Analysiere BACnet-Details mit TShark...", 0);
-                    AddLog("Phase 2: Analysiere BACnet-Details mit TShark...");
+                    progressCallback("Phase 2/2", "Start: Extrahiere I-Am Devices", 0);
+                    AddLog("Phase 2: Extrahiere I-Am Devices...");
+
+                    // Timer für STEP1 Animation
+                    System.Timers.Timer? animationTimer = null;
+                    int animationFrame = 0;
+                    string[] animationChars = { "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█" }; // Balken-Animation
 
                     EventHandler<string>? phase2Handler = (s, msg) =>
                     {
-                        if (msg.StartsWith("Verarbeitet:"))
+                        try
                         {
-                            try
+                            // Animation für STEP 1
+                            if (msg.StartsWith("[ANIM]"))
                             {
-                                var parts = msg.Split(' ');
-                                if (parts.Length >= 2 && int.TryParse(parts[1], out int count))
+                                var baseText = msg.Substring(6); // Entferne "[ANIM]"
+
+                                // Starte Animation wenn nicht schon läuft
+                                if (animationTimer == null)
                                 {
-                                    int estimatedPercent = Math.Min(90, (count / 1000) * 2);
-                                    progressCallback("Phase 2/2", $"Gelesen: {count:N0} Pakete", estimatedPercent);
+                                    animationFrame = 0;
+                                    animationTimer = new System.Timers.Timer(150); // 150ms für schöne Animation
+                                    animationTimer.Elapsed += (sender, e) =>
+                                    {
+                                        string animChar = animationChars[animationFrame % animationChars.Length];
+                                        progressCallback("Phase 2/2", baseText + " " + animChar, 0);
+                                        animationFrame++;
+                                    };
+                                    animationTimer.Start();
                                 }
                             }
-                            catch { }
+                            // Abschluss von STEP 1
+                            else if (msg.StartsWith("[DONE:1]"))
+                            {
+                                animationTimer?.Stop();
+                                animationTimer?.Dispose();
+                                animationTimer = null;
+                                animationFrame = 0;
+                                var doneMessage = msg.Substring(8); // Entferne "[DONE:1]"
+                                progressCallback("Phase 2/2", doneMessage, 0);
+                            }
+                            // STEP 2 - Nur Text anzeigen
+                            else if (msg.StartsWith("[STEP2]"))
+                            {
+                                var textMessage = msg.Substring(7); // Entferne "[STEP2]"
+                                progressCallback("Phase 2/2", textMessage, 0);
+                            }
+                            // Parse strukturierte Meldungen für STEP 3: [STEP:stepNr:aktuell:gesamt]Text
+                            else if (msg.StartsWith("[STEP:"))
+                            {
+                                var endBracket = msg.IndexOf(']');
+                                if (endBracket > 0)
+                                {
+                                    var stepInfo = msg.Substring(6, endBracket - 6);
+                                    var stepParts = stepInfo.Split(':');
+                                    var textMessage = msg.Substring(endBracket + 1);
+
+                                    if (stepParts.Length == 3 &&
+                                        int.TryParse(stepParts[0], out int step) &&
+                                        int.TryParse(stepParts[1], out int current) &&
+                                        int.TryParse(stepParts[2], out int total))
+                                    {
+                                        if (step == 3)
+                                        {
+                                            // Berechne Prozentsatz für STEP 3 (0-100%)
+                                            int percent = total > 0 ? (current * 100) / total : 0;
+                                            percent = Math.Min(100, Math.Max(0, percent));
+                                            progressCallback("Phase 2/2", textMessage, percent);
+                                        }
+                                    }
+                                }
+                            }
+                            // Legacy: Fallback auf alte Meldungen
+                            else if (msg.Contains("Fertig:"))
+                            {
+                                progressCallback("Phase 2/2", msg, 100);
+                            }
                         }
+                        catch { }
                     };
 
                     _tsharkParser.ProgressChanged += phase2Handler;
@@ -215,6 +276,10 @@ namespace BACnetPana.Core.ViewModels
                     var tsharkPackets = await _tsharkParser.ReadPcapFileAsync(filePath, cancellationToken);
 
                     _tsharkParser.ProgressChanged -= phase2Handler;
+
+                    // Cleanup Animation Timer
+                    animationTimer?.Stop();
+                    animationTimer?.Dispose();
 
                     cancellationToken.ThrowIfCancellationRequested();
 

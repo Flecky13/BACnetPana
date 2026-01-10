@@ -118,14 +118,17 @@ namespace BACnetPana.DataAccess
             var packets = new List<NetworkPacket>();
             BACnetDb = new BACnetDatabase(); // Reset bei jedem neuen File
 
-            // Extrahiere zunächst I-Am Devices direkt aus PCAP mit tshark
-            ProgressChanged?.Invoke(this, "Extrahiere I-Am Devices...");
+            // Schritt 1: Extrahiere I-Am Devices direkt aus PCAP mit tshark
+            System.Diagnostics.Debug.WriteLine("[STEP1] Start: Extrahiere I-Am Devices...");
+            ProgressChanged?.Invoke(this, "[ANIM]Start: Extrahiere I-Am Devices");
             BACnetDb.ExtractIAmDevicesFromPcap(filePath);
-            ProgressChanged?.Invoke(this, $"I-Am Devices gefunden: {BACnetDb.IpToInstance.Count}");
+            System.Diagnostics.Debug.WriteLine($"[STEP1] Fertig: {BACnetDb.IpToInstance.Count} Devices gefunden");
+            ProgressChanged?.Invoke(this, $"[DONE:1]Gefunden: {BACnetDb.IpToInstance.Count} BACnet-Geräte");
 
             try
             {
-                ProgressChanged?.Invoke(this, "Starte TShark...");
+                System.Diagnostics.Debug.WriteLine("[STEP2] Start: Starte Paket-Analyse mit TShark...");
+                ProgressChanged?.Invoke(this, "[STEP2]Process gestartet, lese JSON : 0 MB Gelesen");
 
                 // TShark-Aufruf mit JSON-Export
                 // -r: Lese PCAP-Datei
@@ -185,7 +188,8 @@ namespace BACnetPana.DataAccess
 
                 process.Start();
 
-                ProgressChanged?.Invoke(this, "Parse JSON-Daten (Stream)...");
+                System.Diagnostics.Debug.WriteLine("[STEP2] Process gestartet, lese Stream...");
+                ProgressChanged?.Invoke(this, "TShark gestartet, lese JSON-Stream...");
 
                 // Parse JSON direkt aus dem Stream für bessere Memory-Effizienz
                 // Bei sehr großen Dateien kann das immer noch viel Speicher benötigen
@@ -196,7 +200,8 @@ namespace BACnetPana.DataAccess
                 catch (OutOfMemoryException)
                 {
                     // Fallback: Versuche mit ReadToEnd (alte Methode) wenn Stream-Parsing fehlschlägt
-                    ProgressChanged?.Invoke(this, "Speicherproblem - versuche alternative Methode...");
+                    System.Diagnostics.Debug.WriteLine("[STEP2] OutOfMemory Exception!");
+                    ProgressChanged?.Invoke(this, "[STEP:2:50:100]Speicherproblem - versuche alternative Methode...");
                     throw; // Re-throw für jetzt, keine alternative Methode
                 }
 
@@ -236,7 +241,7 @@ namespace BACnetPana.DataAccess
                 // Strategie für sehr große Dateien: Verwende temporäre Datei statt MemoryStream
                 // MemoryStream hat eine Größenbeschränkung, Dateien nicht
 
-                ProgressChanged?.Invoke(this, "Starte JSON-Stream-Parsing...");
+                System.Diagnostics.Debug.WriteLine("[STEP2] Erstelle temporäre Datei und lese JSON...");
 
                 // Erstelle temporäre Datei
                 tempFilePath = Path.Combine(Path.GetTempPath(), $"tshark_output_{Guid.NewGuid()}.json");
@@ -245,6 +250,8 @@ namespace BACnetPana.DataAccess
                 const int bufferSize = 81920; // 80KB Chunks
                 var buffer = new char[bufferSize];
                 long totalCharsRead = 0;
+                long lastProgressUpdate = 0;
+                const long progressInterval = 500 * 1024; // 500KB in Chars
 
                 using (var fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize))
                 using (var writer = new StreamWriter(fileStream, System.Text.Encoding.UTF8))
@@ -257,17 +264,23 @@ namespace BACnetPana.DataAccess
                         writer.Write(buffer, 0, charsRead);
                         totalCharsRead += charsRead;
 
-                        if (totalCharsRead % (bufferSize * 10) == 0) // Alle ~800KB
+                        // Update Progress alle 500KB - nutze echte Dateigröße
+                        if (totalCharsRead - lastProgressUpdate >= progressInterval)
                         {
-                            long megabytes = (totalCharsRead * 2) / 1024 / 1024; // Ungefähr 2 Bytes pro Char
-                            ProgressChanged?.Invoke(this, $"Gelesen: ~{megabytes} MB");
+                            writer.Flush();
+                            long actualFileSizeMB = fileStream.Length / 1024 / 1024; // Echte Dateigröße
+                            System.Diagnostics.Debug.WriteLine($"[STEP2] Gelesen: ~{actualFileSizeMB} MB");
+                            // Format: [STEP2]Text mit echte MB
+                            ProgressChanged?.Invoke(this, $"[STEP2]Process gestartet, lese JSON : {actualFileSizeMB} MB Gelesen");
+                            lastProgressUpdate = totalCharsRead;
                             cancellationToken.ThrowIfCancellationRequested();
                         }
                     }
                 }
 
                 long fileSizeMB = new FileInfo(tempFilePath).Length / 1024 / 1024;
-                ProgressChanged?.Invoke(this, $"JSON gespeichert ({fileSizeMB} MB), parse Pakete...");
+                System.Diagnostics.Debug.WriteLine($"[STEP2] JSON vollständig: {fileSizeMB} MB, starte Parsing...");
+                ProgressChanged?.Invoke(this, $"[STEP2]Process gestartet, lese JSON : {fileSizeMB} MB Gelesen");
 
                 // Jetzt parse das JSON aus der temporären Datei
                 using (var fileStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -283,6 +296,11 @@ namespace BACnetPana.DataAccess
                     {
                         throw new Exception("TShark JSON ist kein Array");
                     }
+
+                    // Zähle zuerst die Pakete für Fortschrittsberechnung
+                    int totalPackets = root.GetArrayLength();
+                    System.Diagnostics.Debug.WriteLine($"[STEP3] Start: {totalPackets} Pakete zu verarbeiten");
+                    ProgressChanged?.Invoke(this, $"[STEP:3:0:{totalPackets}]Parse {totalPackets} Pakete...");
 
                     foreach (var item in root.EnumerateArray())
                     {
@@ -300,16 +318,23 @@ namespace BACnetPana.DataAccess
                             // Verarbeite BACnet-Informationen
                             BACnetDb.ProcessPacket(packet);
 
+                            // Nur alle 5000 Pakete Progress aktualisieren
                             if (packetCount % 5000 == 0)
                             {
-                                ProgressChanged?.Invoke(this, $"Verarbeitet: {packetCount} Pakete");
+                                // Format: [STEP:3:aktuell:gesamt]Verarbeite Pakete
+                                System.Diagnostics.Debug.WriteLine($"[STEP3] Verarbeitet: {packetCount:N0}/{totalPackets:N0}");
+                                ProgressChanged?.Invoke(this, $"[STEP:3:{packetCount}:{totalPackets}]Verarbeite Pakete... {packetCount:N0}/{totalPackets:N0}");
                             }
                         }
-                        catch (Exception ex)
+                        catch
                         {
-                            ProgressChanged?.Invoke(this, $"Warnung bei Paket {packetCount}: {ex.Message}");
+                            //ProgressChanged?.Invoke(this, $"Warnung bei Paket {packetCount}: {ex.Message}");
                         }
                     }
+
+                    // Finale Progress-Meldung
+                    System.Diagnostics.Debug.WriteLine($"[STEP3] Fertig: {totalPackets:N0} Pakete verarbeitet");
+                    ProgressChanged?.Invoke(this, $"[STEP:3:{totalPackets}:{totalPackets}]Verarbeitet: {totalPackets:N0} Pakete");
                 }
             }
             catch (JsonException ex)
@@ -352,11 +377,14 @@ namespace BACnetPana.DataAccess
             try
             {
                 // Für große Dateien: Lese komplettes JSON in Chunks
+                System.Diagnostics.Debug.WriteLine("[STEP2] Lade JSON-Daten...");
                 ProgressChanged?.Invoke(this, "Lade JSON-Daten...");
 
                 string jsonContent = reader.ReadToEnd();
+                long jsonSize = jsonContent.Length / 1024 / 1024; // Größe in MB
 
-                ProgressChanged?.Invoke(this, "Parse JSON-Daten...");
+                System.Diagnostics.Debug.WriteLine($"[STEP2] JSON geladen: {jsonSize} MB");
+                ProgressChanged?.Invoke(this, $"JSON geladen: {jsonSize} MB, starte Parsing...");
 
                 // Verwende den normalen JSON-Parser mit Streaming
                 using var document = JsonDocument.Parse(jsonContent, new JsonDocumentOptions
@@ -371,6 +399,11 @@ namespace BACnetPana.DataAccess
                 {
                     throw new Exception("TShark JSON ist kein Array");
                 }
+
+                // Zähle zuerst die Pakete für Fortschrittsberechnung
+                int totalPackets = root.GetArrayLength();
+                System.Diagnostics.Debug.WriteLine($"[STEP3] Start: {totalPackets} Pakete zu verarbeiten");
+                ProgressChanged?.Invoke(this, $"[STEP:3:0:{totalPackets}]Parse {totalPackets} Pakete...");
 
                 foreach (var item in root.EnumerateArray())
                 {
@@ -388,16 +421,23 @@ namespace BACnetPana.DataAccess
                         // Verarbeite BACnet-Informationen
                         BACnetDb.ProcessPacket(packet);
 
+                        // Nur alle 5000 Pakete Progress aktualisieren
                         if (packetCount % 5000 == 0)
                         {
-                            ProgressChanged?.Invoke(this, $"Verarbeitet: {packetCount} Pakete");
+                            // Format: [STEP:3:aktuell:gesamt]Verarbeite Pakete
+                            System.Diagnostics.Debug.WriteLine($"[STEP3] Verarbeitet: {packetCount:N0}/{totalPackets:N0}");
+                            ProgressChanged?.Invoke(this, $"[STEP:3:{packetCount}:{totalPackets}]Verarbeite Pakete... {packetCount:N0}/{totalPackets:N0}");
                         }
                     }
-                    catch (Exception ex)
+                    catch
                     {
-                        ProgressChanged?.Invoke(this, $"Warnung bei Paket {packetCount}: {ex.Message}");
+                        //ProgressChanged?.Invoke(this, $"Warnung bei Paket {packetCount}: {ex.Message}");
                     }
                 }
+
+                // Finale Progress-Meldung
+                System.Diagnostics.Debug.WriteLine($"[STEP3] Fertig: {totalPackets:N0} Pakete verarbeitet");
+                ProgressChanged?.Invoke(this, $"[STEP:3:{totalPackets}:{totalPackets}]Verarbeitet: {totalPackets:N0} Pakete");
             }
             catch (JsonException ex)
             {
@@ -449,7 +489,7 @@ namespace BACnetPana.DataAccess
                     }
                     catch (Exception ex)
                     {
-                        ProgressChanged?.Invoke(this, $"Warnung bei Paket {packetCount}: {ex.Message}");
+                        //ProgressChanged?.Invoke(this, $"Warnung bei Paket {packetCount}: {ex.Message}");
                     }
                 }
             }

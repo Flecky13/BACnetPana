@@ -7,20 +7,13 @@
         FontFamily="Segoe UI"
         Icon="icons/toolicon.ico">
     <DockPanel LastChildFill="True">
-        <!-- Toolbar + Progress -->
-        <Grid DockPanel.Dock="Top" Background="#2D2D2D">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-            </Grid.RowDefinitions>
-
-            <!-- Buttons -->
-            <Grid Grid.Row="0" Height="80">
+        <!-- Toolbar -->
+        <Grid DockPanel.Dock="Top" Background="#2D2D2D" Height="80">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Margin="10">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="10">
                     <Image Source="images/toolicon.png" Width="60" Height="60" Margin="10,0,5,0" VerticalAlignment="Center"/>
                     <Button x:Name="OpenFileButton" Padding="15,10" Margin="5" MinHeight="50" MinWidth="100"
                             Background="#0078D4" Foreground="White" FontSize="16"
@@ -42,27 +35,6 @@
                         <TextBlock Text="❓ Hilfe" TextWrapping="NoWrap"/>
                     </Button>
                 </StackPanel>
-            </Grid>
-
-            <!-- Progress Bars -->
-            <Grid Grid.Row="1" Background="#1E1E1E" Height="40" Visibility="{Binding IsLoading, Converter={StaticResource BooleanToVisibilityConverter}}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Phase 1 Progress -->
-                <Grid Grid.Column="0" Margin="0,0,2,0">
-                    <ProgressBar Value="{Binding Phase1Progress}" Maximum="100" Background="#404040" Foreground="#0078D4" Height="40"/>
-                    <TextBlock Text="{Binding Phase1Message}" Foreground="White" Padding="10,0" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
-                </Grid>
-
-                <!-- Phase 2 Progress -->
-                <Grid Grid.Column="1" Margin="2,0,0,0">
-                    <ProgressBar Value="{Binding Phase2Progress}" Maximum="100" Background="#404040" Foreground="#28A745" Height="40"/>
-                    <TextBlock Text="{Binding Phase2Message}" Foreground="White" Padding="10,0" VerticalAlignment="Center" FontSize="11" FontWeight="SemiBold" HorizontalAlignment="Left"/>
-                </Grid>
-            </Grid>
         </Grid>
 
         <!-- Main Grid -->

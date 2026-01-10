@@ -254,18 +254,18 @@ namespace BACnetPana.Models
             try
             {
                 var tsharkPath = FindTShark();
-                System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: tsharkPath = {tsharkPath ?? "NULL"}");
+                //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: tsharkPath = {tsharkPath ?? "NULL"}");
 
                 if (string.IsNullOrWhiteSpace(tsharkPath))
                 {
-                    System.Diagnostics.Debug.WriteLine("ExtractIAmDevicesFromPcap: tshark nicht gefunden!");
+                    //System.Diagnostics.Debug.WriteLine("ExtractIAmDevicesFromPcap: tshark nicht gefunden!");
                     return;
                 }
 
                 // Filter für I-Am (0) und I-Have (1) - nutze Info-Spalte zum Parsen von "device,XXXXX"
                 // Felder: ip.src | bacapp.instance_number (I-Am) | _ws.col.Info (für I-Have parsing)
                 var arguments = $"-r \"{pcapFilePath}\" -Y \"bacapp.unconfirmed_service == 0 || bacapp.unconfirmed_service == 1\" -T fields -e ip.src -e bacapp.instance_number -e _ws.col.Info";
-                System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: Arguments = {arguments}");
+                //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: Arguments = {arguments}");
 
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
@@ -281,7 +281,7 @@ namespace BACnetPana.Models
                 {
                     if (process == null)
                     {
-                        System.Diagnostics.Debug.WriteLine("ExtractIAmDevicesFromPcap: Process.Start() returned null");
+                        //System.Diagnostics.Debug.WriteLine("ExtractIAmDevicesFromPcap: Process.Start() returned null");
                         return;
                     }
 
@@ -289,30 +289,29 @@ namespace BACnetPana.Models
                     string errorOutput = process.StandardError.ReadToEnd();
                     process.WaitForExit();
 
-                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: ExitCode = {process.ExitCode}");
-                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: Output length = {output.Length}");
-                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: StdErr = {errorOutput}");
+                    //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: ExitCode = {process.ExitCode}");
+                    //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: Output length = {output.Length}");
+                    //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: StdErr = {errorOutput}");
 
                     if (!string.IsNullOrWhiteSpace(output))
                     {
-                        System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: First 200 chars of output: {output.Substring(0, Math.Min(200, output.Length))}");
+                        //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: First 200 chars of output: {output.Substring(0, Math.Min(200, output.Length))}");
                     }
 
                     if (process.ExitCode != 0)
                     {
-                        System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: tshark ExitCode != 0");
+                        //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: tshark ExitCode != 0");
                         return;
                     }
 
                     // Parse Output: "IP\tInstance\tInfo\n..."
                     var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
-                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: Anzahl Zeilen = {lines.Length}");
+                    System.Diagnostics.Debug.WriteLine($"[STEP1] Gefunden: {lines.Length} Zeilen zur Analyse");
 
                     int successCount = 0;
                     foreach (var line in lines)
                     {
                         var parts = line.Split(new[] { '\t' }, StringSplitOptions.None);
-                        System.Diagnostics.Debug.WriteLine($"  Line: '{line}' -> Parts: {parts.Length}");
 
                         if (parts.Length >= 1)
                         {
@@ -345,28 +344,24 @@ namespace BACnetPana.Models
                                 }
                             }
 
-                            System.Diagnostics.Debug.WriteLine($"    IP: '{ip}', Instance: '{instance}'");
-
                             if (!string.IsNullOrWhiteSpace(ip) && !string.IsNullOrWhiteSpace(instance))
                             {
                                 IpToInstance[ip] = instance;
                                 successCount++;
-                                System.Diagnostics.Debug.WriteLine($"    ✓ Hinzugefügt");
-                            }
-                            else
-                            {
-                                System.Diagnostics.Debug.WriteLine($"    ✗ IP oder Instance leer");
+
+                                // Debug: Zeige jedes gefundene Gerät
+                                System.Diagnostics.Debug.WriteLine($"[STEP1]   Gerät {successCount}: IP={ip}, Instance={instance}");
                             }
                         }
                     }
 
-                    System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap: {successCount} Devices hinzugefügt. Total: {IpToInstance.Count}");
+                    System.Diagnostics.Debug.WriteLine($"[STEP1] Gesamt: {successCount} BACnet-Geräte gefunden");
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap EXCEPTION: {ex.Message}");
-                System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap STACKTRACE: {ex.StackTrace}");
+                //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap EXCEPTION: {ex.Message}");
+                //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap STACKTRACE: {ex.StackTrace}");
             }
         }
 
