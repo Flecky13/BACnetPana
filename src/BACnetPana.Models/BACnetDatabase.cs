@@ -358,10 +358,9 @@ namespace BACnetPana.Models
                     System.Diagnostics.Debug.WriteLine($"[STEP1] Gesamt: {successCount} BACnet-Geräte gefunden");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap EXCEPTION: {ex.Message}");
-                //System.Diagnostics.Debug.WriteLine($"ExtractIAmDevicesFromPcap STACKTRACE: {ex.StackTrace}");
+                // Fehler werden absichtlich still behandelt, Geräte-Erkennung ist optional
             }
         }
 

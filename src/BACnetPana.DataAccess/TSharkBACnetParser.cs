@@ -218,9 +218,9 @@ namespace BACnetPana.DataAccess
                 ProgressChanged?.Invoke(this, $"Fertig: {packets.Count} Pakete gelesen");
                 ProgressChanged?.Invoke(this, BACnetDb.GetSummary());
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                ProgressChanged?.Invoke(this, $"Fehler: {ex.Message}");
+                ProgressChanged?.Invoke(this, "Fehler beim Lesen mit TShark");
                 throw;
             }
 
@@ -487,9 +487,9 @@ namespace BACnetPana.DataAccess
                             ProgressChanged?.Invoke(this, $"Verarbeitet: {packetCount} Pakete");
                         }
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
-                        //ProgressChanged?.Invoke(this, $"Warnung bei Paket {packetCount}: {ex.Message}");
+                        // Paketfehler ignorieren, Verarbeitung fortsetzen
                     }
                 }
             }

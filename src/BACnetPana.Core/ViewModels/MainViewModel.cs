@@ -70,6 +70,10 @@ namespace BACnetPana.Core.ViewModels
         [ObservableProperty]
         private string? currentAnalysisFile;
 
+        private string? _lastLogBase;
+        private DateTime _lastLogTime;
+        private int _lastLogRepeatCount;
+
         public MainViewModel()
         {
             // Immer SharpPcap für das generelle Parsing verwenden
@@ -661,18 +665,53 @@ namespace BACnetPana.Core.ViewModels
             }
         }
 
+        public void AddUiLog(string message) => AddLog(message);
+
         private void AddLog(string message)
         {
-            var logEntry = $"[{DateTime.Now:HH:mm:ss}] {message}";
+            // Filtere Phase-Updates (immer - nicht konfigurierbar)
+            if (message.Contains("Phase") || message.Contains("Übersprungen"))
+                return;
 
-            // Auf dem UI-Thread ausführen
+            // Filtere Progress-Meldungen (Gelesen: x von y Paketen)
+            if (message.Contains("Gelesen:") && message.Contains("von") && message.Contains("Paketen"))
+                return;
+
+            // Filtere [STEP2] und [STEP3] Meldungen (JSON-Lesen und Paketverarbeitung)
+            if (message.Contains("[STEP2]") || message.Contains("[STEP3") || message.Contains("Verarbeite"))
+                return;
+
+            var now = DateTime.Now;
+            var baseMsg = message?.Trim() ?? string.Empty;
+
             _synchronizationContext.Post(_ =>
             {
-                LogMessages.Add(logEntry);
+                if (string.Equals(_lastLogBase, baseMsg, StringComparison.Ordinal))
+                {
+                    _lastLogRepeatCount++;
+                    // Update letzte Zeile statt neue anzuhängen
+                    if (LogMessages.Count > 0)
+                    {
+                        // Behalte ursprünglichen Zeitstempel der letzten Zeile
+                        var last = LogMessages[LogMessages.Count - 1];
+                        var idx = last.IndexOf(']');
+                        var ts = idx > 0 ? last.Substring(0, idx + 1) : $"[{now:HH:mm:ss}]";
+                        LogMessages[LogMessages.Count - 1] = $"{ts} {baseMsg} (x{_lastLogRepeatCount})";
+                    }
+                }
+                else
+                {
+                    _lastLogBase = baseMsg;
+                    _lastLogTime = now;
+                    _lastLogRepeatCount = 1;
 
-                // Keep only last 1000 messages
-                while (LogMessages.Count > 1000)
-                    LogMessages.RemoveAt(0);
+                    LogMessages.Add($"[{now:HH:mm:ss}] {baseMsg}");
+
+                    // Keep only last 200 messages (stark reduziert)
+                    while (LogMessages.Count > 200)
+                        LogMessages.RemoveAt(0);
+                }
             }, null);
-        }    }
+        }
+    }
 }

@@ -243,7 +243,7 @@ namespace BACnetPana.UI
                 // Kein Filter - zeige alle Pakete
                 var view = CollectionViewSource.GetDefaultView(_viewModel.Packets);
                 view.Filter = null;
-                _viewModel.LogMessages.Add($"[{DateTime.Now:HH:mm:ss}] Filter entfernt - {_viewModel.Packets.Count} Pakete angezeigt");
+                _viewModel.AddUiLog($"Filter entfernt - {_viewModel.Packets.Count} Pakete angezeigt");
 
                 // Update UI - kein Filter aktiv
                 ProtocolHeaderTextBlock.Text = "Protokolle (Hierarchisch)";
@@ -293,7 +293,7 @@ namespace BACnetPana.UI
                 };
 
                 // Log ohne die gefilterte Anzahl zu berechnen (Performance!)
-                _viewModel.LogMessages.Add($"[{DateTime.Now:HH:mm:ss}] Filter '{filterText}' angewendet");
+                _viewModel.AddUiLog($"Filter '{filterText}' angewendet");
 
                 // Update UI - Filter aktiv
                 ProtocolHeaderTextBlock.Text = "Protokolle (Hierarchisch) (gefiltert)";

@@ -208,13 +208,12 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Text="Protokoll" Margin="10" FontWeight="Bold" Grid.Column="0" VerticalAlignment="Center"/>
                             <CheckBox x:Name="AutoScrollCheckBox" Grid.Column="1" Margin="5" VerticalAlignment="Center"
                                       IsChecked="True" ToolTip="Automatisch zu neuesten Einträgen scrollen"/>
                             <TextBlock Grid.Column="1" Margin="25,0,5,0" Text="Auto-Scroll" VerticalAlignment="Center" FontSize="11"/>
-                            <Button x:Name="ClearLogButton" Grid.Column="3" Margin="3" Padding="8,5"
+                            <Button x:Name="ClearLogButton" Grid.Column="2" Margin="3" Padding="8,5"
                                     Background="#FFA8FBB1" Foreground="White" BorderThickness="0"
                                     Click="ClearLogButton_Click" ToolTip="Protokoll löschen">
                                 <TextBlock Text="🗑" FontSize="16" Foreground="Black"/>

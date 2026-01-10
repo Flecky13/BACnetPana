@@ -90,9 +90,14 @@ namespace BACnetPana.DataAccess
             }
 
             // Zeitbasierte Statistiken
+            // Zeitbasierte Statistiken - 5-Minuten-Binning für bessere Aggregation
             foreach (var packet in completePackets)
             {
-                var timeKey = packet.Timestamp.Date.AddSeconds(Math.Floor(packet.Timestamp.Second / 1d));
+                // Runde auf nächste 5-Minuten Grenze
+                var totalSeconds = (long)packet.Timestamp.TimeOfDay.TotalSeconds;
+                var binSize = 5 * 60; // 5 Minuten
+                var binnedSeconds = (totalSeconds / binSize) * binSize;
+                var timeKey = packet.Timestamp.Date.AddSeconds(binnedSeconds);
 
                 if (!stats.PacketsPerSecond.ContainsKey(timeKey))
                     stats.PacketsPerSecond[timeKey] = 0;
