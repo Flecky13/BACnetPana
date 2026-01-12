@@ -83,9 +83,11 @@ namespace BACnetPana.Models
             _bacnetPacketsFound++;
             _packetsWithDetails++;
             string? instanceCandidate = null;
+            string? instanceSource = null;  // Woher kommt die Instance-Number?
             string? deviceNameCandidate = null;
             string? vendorIdCandidate = null;
             bool isIAm = false;
+            bool isCov = false;  // Flag für COV-Pakete
 
             foreach (var detail in packet.Details)
             {
@@ -97,6 +99,23 @@ namespace BACnetPana.Models
                 if (!isIAm && (valueLower.Contains("i-am") || valueLower.Contains("iam")))
                 {
                     isIAm = true;
+                    System.Diagnostics.Debug.WriteLine($"[PACKET] IP={sourceIp}: Erkannt als I-Am Paket");
+                }
+
+                // Erkenne COV-Pakete (Confirmed Service == 1 oder Unconfirmed Service == 2)
+                if (!isCov && (key.Contains("confirmed_service") || key.Contains("unconfirmed_service")))
+                {
+                    // Prüfe ob es eine COV ist
+                    if (key.Contains("confirmed") && rawValue == "1")
+                    {
+                        isCov = true;
+                        System.Diagnostics.Debug.WriteLine($"[PACKET] IP={sourceIp}: Erkannt als COV Paket (confirmed_service==1)");
+                    }
+                    else if (key.Contains("unconfirmed") && rawValue == "2")
+                    {
+                        isCov = true;
+                        System.Diagnostics.Debug.WriteLine($"[PACKET] IP={sourceIp}: Erkannt als COV Paket (unconfirmed_service==2)");
+                    }
                 }
 
                 // Priorität 1: bacapp.instance_number (bei I-Am Paketen)
@@ -106,7 +125,11 @@ namespace BACnetPana.Models
                     {
                         var extracted = ExtractInstanceNumber(rawValue);
                         if (!string.IsNullOrEmpty(extracted))
+                        {
                             instanceCandidate = extracted;
+                            instanceSource = $"Feld '{key}' (Wert: {rawValue})";
+                            System.Diagnostics.Debug.WriteLine($"[PACKET] IP={sourceIp}: PRIORITÄT 1 - Instance aus '{key}'={rawValue} → {extracted}");
+                        }
                     }
                 }
 
@@ -118,7 +141,11 @@ namespace BACnetPana.Models
                     {
                         var extracted = ExtractInstanceNumber(parts[1]);
                         if (!string.IsNullOrEmpty(extracted))
+                        {
                             instanceCandidate = extracted;
+                            instanceSource = $"Pattern 'device,XXXXX' aus Feld '{key}' (Wert: {rawValue})";
+                            System.Diagnostics.Debug.WriteLine($"[PACKET] IP={sourceIp}: PRIORITÄT 2 - Instance aus 'device,'-Pattern in '{key}'={rawValue} → {extracted}");
+                        }
                     }
                 }
 
@@ -131,7 +158,11 @@ namespace BACnetPana.Models
                     {
                         var parsed = ExtractInstanceNumber(rawValue);
                         if (!string.IsNullOrEmpty(parsed))
+                        {
                             instanceCandidate = parsed;
+                            instanceSource = $"Feld '{key}' (Wert: {rawValue})";
+                            System.Diagnostics.Debug.WriteLine($"[PACKET] IP={sourceIp}: PRIORITÄT 3 - Instance aus '{key}'={rawValue} → {parsed}");
+                        }
                     }
                 }
 
@@ -141,7 +172,10 @@ namespace BACnetPana.Models
                     if (key.Contains("object_name") || key.Contains("device_name") || key.Contains("name"))
                     {
                         if (!string.IsNullOrWhiteSpace(rawValue) && rawValue.Length > 1)
+                        {
                             deviceNameCandidate = rawValue.Trim();
+                            // Device-Namen werden NICHT geloggt, um die Ausgabe sauber zu halten
+                        }
                     }
                 }
 
@@ -151,7 +185,10 @@ namespace BACnetPana.Models
                     if (key.Contains("vendor"))
                     {
                         if (!string.IsNullOrWhiteSpace(rawValue))
+                        {
                             vendorIdCandidate = rawValue.Trim();
+                            // Vendor-ID wird NICHT geloggt, um die Ausgabe sauber zu halten
+                        }
                     }
                 }
             }
@@ -163,11 +200,23 @@ namespace BACnetPana.Models
                 {
                     // Bei I-Am: Immer speichern/überschreiben
                     IpToInstance[sourceIp] = instanceCandidate;
+                    System.Diagnostics.Debug.WriteLine($"[DEVICE] IP={sourceIp}: GESPEICHERT Instance={instanceCandidate} (Typ: I-Am, Quelle: {instanceSource})");
                 }
-                else if (!IpToInstance.ContainsKey(sourceIp))
+                else if (isCov && !IpToInstance.ContainsKey(sourceIp))
+                {
+                    // Bei COV-Paketen: Nur wenn noch nicht vorhanden (geringere Priorität als I-Am)
+                    IpToInstance[sourceIp] = instanceCandidate;
+                    System.Diagnostics.Debug.WriteLine($"[DEVICE] IP={sourceIp}: GESPEICHERT Instance={instanceCandidate} (Typ: COV, Quelle: {instanceSource})");
+                }
+                else if (!isIAm && !isCov && !IpToInstance.ContainsKey(sourceIp))
                 {
                     // Bei anderen Paketen: Nur wenn noch nicht vorhanden
                     IpToInstance[sourceIp] = instanceCandidate;
+                    System.Diagnostics.Debug.WriteLine($"[DEVICE] IP={sourceIp}: GESPEICHERT Instance={instanceCandidate} (Typ: Sonstige, Quelle: {instanceSource})");
+                }
+                else if (IpToInstance.ContainsKey(sourceIp))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[DEVICE] IP={sourceIp}: IGNORIERT Instance={instanceCandidate} (bereits vorhanden: {IpToInstance[sourceIp]})");
                 }
             }
             // Speichere Device-Namen (unabhängig von I-Am)
@@ -317,6 +366,7 @@ namespace BACnetPana.Models
                         {
                             string ip = parts[0].Trim();
                             string instance = "";
+                            string instanceSource = "";
 
                             if (!string.IsNullOrWhiteSpace(ip))
                             {
@@ -327,6 +377,7 @@ namespace BACnetPana.Models
                             if (parts.Length >= 2 && !string.IsNullOrWhiteSpace(parts[1]))
                             {
                                 instance = parts[1].Trim();
+                                instanceSource = $"Feld 'bacapp.instance_number' aus I-Am Paket (TShark)";
                             }
 
                             // Priorität 2: Parse "device,XXXXX" aus Info-Spalte (I-Have)
@@ -340,6 +391,7 @@ namespace BACnetPana.Models
                                     {
                                         // Extrahiere Ziffern nach "device,"
                                         instance = ExtractInstanceNumber(deviceParts[1]);
+                                        instanceSource = $"Pattern 'device,XXXXX' aus I-Have Info-Spalte: '{info}'";
                                     }
                                 }
                             }
@@ -349,18 +401,123 @@ namespace BACnetPana.Models
                                 IpToInstance[ip] = instance;
                                 successCount++;
 
-                                // Debug: Zeige jedes gefundene Gerät
-                                System.Diagnostics.Debug.WriteLine($"[STEP1]   Gerät {successCount}: IP={ip}, Instance={instance}");
+                                // Debug: Zeige jedes gefundene Gerät mit Quelle
+                                System.Diagnostics.Debug.WriteLine($"[STEP1:IAM] Gerät {successCount}: IP={ip}, Instance={instance}");
+                                System.Diagnostics.Debug.WriteLine($"[STEP1:IAM]   └─ Quelle: {instanceSource}");
                             }
                         }
                     }
 
-                    System.Diagnostics.Debug.WriteLine($"[STEP1] Gesamt: {successCount} BACnet-Geräte gefunden");
+                    System.Diagnostics.Debug.WriteLine($"[STEP1] Gesamt (I-Am/I-Have): {successCount} BACnet-Geräte gefunden");
                 }
+
+                // Jetzt extrahiere zusätzliche Devices aus COV-Paketen (Change of Value)
+                // COV: confirmed_service==1 || unconfirmed_service==2
+                System.Diagnostics.Debug.WriteLine("[STEP1] Start: Extrahiere zusätzliche Devices aus COV-Paketen...");
+                ExtractCovDevicesFromPcap(pcapFilePath, tsharkPath);
             }
             catch (Exception)
             {
                 // Fehler werden absichtlich still behandelt, Geräte-Erkennung ist optional
+            }
+        }
+
+        /// <summary>
+        /// Extrahiert Device-IDs aus COV-Paketen (Change of Value)
+        /// COV-Pakete enthalten Object-Type und Instance-Number, die auf die Quell-IP gemappt werden
+        /// Filter: (bacapp.confirmed_service==1 || bacapp.unconfirmed_service==2)
+        /// </summary>
+        private void ExtractCovDevicesFromPcap(string pcapFilePath, string tsharkPath)
+        {
+            try
+            {
+                // COV: confirmed_service==1 oder unconfirmed_service==2
+                // Extrahiere: IP | Object-Type | Instance-Number
+                var arguments = $"-r \"{pcapFilePath}\" -Y \"bacapp.confirmed_service == 1 || bacapp.unconfirmed_service == 2\" -T fields -e ip.src -e bacapp.objectType -e bacapp.instance_number";
+
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = tsharkPath,
+                    Arguments = arguments,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                using (var process = System.Diagnostics.Process.Start(psi))
+                {
+                    if (process == null)
+                        return;
+
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit();
+
+                    if (process.ExitCode != 0 || string.IsNullOrWhiteSpace(output))
+                        return;
+
+                    var lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                    System.Diagnostics.Debug.WriteLine($"[STEP1] COV-Pakete: {lines.Length} Zeilen analysiert");
+
+                    int covSuccessCount = 0;
+                    foreach (var line in lines)
+                    {
+                        var parts = line.Split(new[] { '\t' }, StringSplitOptions.None);
+
+                        if (parts.Length >= 3)
+                        {
+                            string ip = parts[0].Trim();
+                            string objectTypesStr = parts[1].Trim();  // Kann mehrere Werte enthalten (z.B. "8,2")
+                            string instancesStr = parts[2].Trim();    // Kann mehrere Werte enthalten (z.B. "40211,19")
+
+                            // Splitte die durch Komma getrennten Werte
+                            var objectTypes = objectTypesStr.Split(new[] { ',' }, System.StringSplitOptions.RemoveEmptyEntries);
+                            var instances = instancesStr.Split(new[] { ',' }, System.StringSplitOptions.RemoveEmptyEntries);
+
+                            // Suche nach Object-Type 8 (Device) und nehme die entsprechende Instance
+                            string? deviceInstance = null;
+                            for (int i = 0; i < objectTypes.Length && i < instances.Length; i++)
+                            {
+                                string objTypeStr = objectTypes[i].Trim();
+                                string instStr = instances[i].Trim();
+
+                                // Object-Type 8 = Device
+                                if (objTypeStr == "8")
+                                {
+                                    deviceInstance = ExtractInstanceNumber(instStr);
+                                    break;
+                                }
+                            }
+
+                            // Fallback: Wenn kein Object-Type 8 gefunden, nimm den ersten Wert
+                            if (string.IsNullOrWhiteSpace(deviceInstance) && instances.Length > 0)
+                            {
+                                deviceInstance = ExtractInstanceNumber(instances[0].Trim());
+                            }
+
+                            // Nur speichern wenn wir noch keine Instance für diese IP haben
+                            if (!string.IsNullOrWhiteSpace(ip) && !string.IsNullOrWhiteSpace(deviceInstance) && !IpToInstance.ContainsKey(ip))
+                            {
+                                IpToInstance[ip] = deviceInstance;
+                                covSuccessCount++;
+                                System.Diagnostics.Debug.WriteLine($"[STEP1:COV] Gerät {covSuccessCount}: IP={ip}, Instance={deviceInstance}");
+                                System.Diagnostics.Debug.WriteLine($"[STEP1:COV]   ├─ Object-Type: {objectTypesStr}");
+                                System.Diagnostics.Debug.WriteLine($"[STEP1:COV]   ├─ Instance-Raw: {instancesStr}");
+                                System.Diagnostics.Debug.WriteLine($"[STEP1:COV]   └─ Quelle: COV-Paket - Object-Type 8 (Device) mit Instance {deviceInstance}");
+                            }
+                            else if (IpToInstance.ContainsKey(ip))
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[STEP1:COV] IP={ip} IGNORIERT (bereits vorhanden: {IpToInstance[ip]})");
+                            }
+                        }
+                    }
+
+                    System.Diagnostics.Debug.WriteLine($"[STEP1] Zusätzlich aus COV: {covSuccessCount} Devices gefunden");
+                }
+            }
+            catch (Exception)
+            {
+                // Fehler werden absichtlich still behandelt
             }
         }
 
