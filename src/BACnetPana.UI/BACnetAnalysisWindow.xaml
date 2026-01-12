@@ -510,6 +510,28 @@
                                     <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Gruppiert nach Quelle → Ziel und Objekt,Instanz Eigenschaft" Margin="0,8,0,0" Foreground="#555" FontStyle="Italic" />
                                 </Grid>
                             </Border>
+
+                            <!-- BACnet Top COV Packets Section -->
+                            <Border x:Name="BACnetTopCovPacketsBorder" Background="White" BorderBrush="#FFA500" BorderThickness="2" Padding="15" Margin="0,8,0,0" MinHeight="280" Visibility="Visible">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="2*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Grid.Row="0" Grid.Column="0" Text="COV-Pakete (Top 10)" FontWeight="Bold" Margin="0,0,0,6" Foreground="#FF8C00"/>
+                                    <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TopCovPacketsCountLabel" Text="Einträge: 0" HorizontalAlignment="Right" FontWeight="Bold" Foreground="#FF8C00"/>
+
+                                    <oxy:PlotView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TopCovPacketsChart" Height="240" Margin="0,6,0,0" PreviewMouseWheel="PlotView_PreviewMouseWheel" />
+
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Format: Device-Instance - Object-Type,Instance | Object-Type,Instance" Margin="0,8,0,0" Foreground="#555" FontStyle="Italic" />
+                                </Grid>
+                            </Border>
                         </StackPanel>
                     </Border>
                 </StackPanel>

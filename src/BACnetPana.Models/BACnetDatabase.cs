@@ -22,6 +22,10 @@ namespace BACnetPana.Models
         // Menge aller Geräte (IP), die jemals ein BACnet-Paket gesendet haben
         public HashSet<string> AllDevices { get; } = new HashSet<string>();
 
+        // COV-Kombinationszähler: "Device-Instance-ObjectType,Instance" -> Häufigkeit
+        // Beispiel: "40211-2,19" -> 100 (bedeutet: 100 COV-Pakete mit dieser exakten Kombination)
+        public Dictionary<string, int> CovCombinationCounts { get; } = new Dictionary<string, int>();
+
         // Debug-Zähler
         private int _totalPacketsProcessed = 0;
         private int _bacnetPacketsFound = 0;
@@ -509,10 +513,63 @@ namespace BACnetPana.Models
                             {
                                 System.Diagnostics.Debug.WriteLine($"[STEP1:COV] IP={ip} IGNORIERT (bereits vorhanden: {IpToInstance[ip]})");
                             }
+
+                            // Sammle und zähle COV-Kombinationen für alle Devices
+                            if (!string.IsNullOrWhiteSpace(deviceInstance))
+                            {
+                                // Zähle jede eindeutige Kombination: "Device-ObjectType,Instance"
+                                for (int i = 0; i < objectTypes.Length && i < instances.Length; i++)
+                                {
+                                    string objType = objectTypes[i].Trim();
+                                    string inst = ExtractInstanceNumber(instances[i].Trim());
+                                    if (!string.IsNullOrWhiteSpace(inst))
+                                    {
+                                        // Erstelle eindeutige Kombinationschlüssel: "40211-2,19"
+                                        string combinationKey = $"{deviceInstance}-{objType},{inst}";
+
+                                        // Erhöhe Zähler für diese Kombination
+                                        if (!CovCombinationCounts.ContainsKey(combinationKey))
+                                            CovCombinationCounts[combinationKey] = 0;
+                                        CovCombinationCounts[combinationKey]++;
+                                    }
+                                }
+                            }
                         }
                     }
 
                     System.Diagnostics.Debug.WriteLine($"[STEP1] Zusätzlich aus COV: {covSuccessCount} Devices gefunden");
+                }
+
+                // Gebe Zusammenfassung aller COV-Kombinationen aus
+                if (CovCombinationCounts.Count > 0)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[STEP1:COV] Gefundene COV-Kombinationen (sortiert nach Häufigkeit):");
+
+                    // Gruppiere nach Device-Instance
+                    var groupedByDevice = CovCombinationCounts
+                        .GroupBy(x => x.Key.Split('-')[0])
+                        .OrderBy(g => int.TryParse(g.Key, out int val) ? val : int.MaxValue);
+
+                    foreach (var deviceGroup in groupedByDevice)
+                    {
+                        string deviceInstance = deviceGroup.Key;
+                        int totalForDevice = deviceGroup.Sum(x => x.Value);
+
+                        System.Diagnostics.Debug.WriteLine($"[STEP1:COV] Device {deviceInstance} (Pakete: {totalForDevice}):");
+
+                        // Sortiere Kombinationen nach Häufigkeit
+                        var sortedCombinations = deviceGroup
+                            .OrderByDescending(x => x.Value)
+                            .ToList();
+
+                        foreach (var combo in sortedCombinations)
+                        {
+                            // combo.Key = "40211-2,19", combo.Value = 100
+                            string[] parts = combo.Key.Split('-');
+                            string combination = parts.Length > 1 ? parts[1] : combo.Key;
+                            System.Diagnostics.Debug.WriteLine($"[STEP1:COV]   ├─ {deviceInstance} - {combination}: {combo.Value} Pakete");
+                        }
+                    }
                 }
             }
             catch (Exception)
@@ -584,5 +641,60 @@ namespace BACnetPana.Models
         {
             return $"BACnet-Datenbasis: {IpToInstance.Count} Instanzen, {IpToDeviceName.Count} Device-Namen, {IpToVendorId.Count} Vendor-IDs";
         }
+
+        /// <summary>
+        /// Gibt die TOP 10 COV-Kombinationen sortiert nach Paketanzahl zurück
+        /// Format: "40211-2,19" (100 Pakete), "40211-2,20" (85 Pakete), etc.
+        /// Filtert Object-Type 8 (Device-Objekte) aus (z.B. "40211-8,40211")
+        /// </summary>
+        public List<(string CombinationKey, int PacketCount)> GetTop10CovCombinations()
+        {
+            // Sortiere alle Kombinationen nach Paketanzahl, filtere Object-Type 8 aus und nimm TOP 10
+            return CovCombinationCounts
+                .Where(x => !x.Key.Contains("-8,"))  // Filtere Object-Type 8 aus
+                .OrderByDescending(x => x.Value)
+                .Take(10)
+                .Select(x => (x.Key, x.Value))
+                .ToList();
+        }
+
+        /// <summary>
+        /// Gibt die TOP 10 COV-Kombinationen für die UI zurück (Kompatibilität mit bestehendem Code)
+        /// Filtert nach den übergebenen Paketen (Zeitfenster-Filterung)
+        /// </summary>
+        public List<dynamic> GetTop10CovPackets(List<NetworkPacket> filteredPackets)
+        {
+            var result = new List<dynamic>();
+
+            // Verwende die bereits gezählten globalen COV-Kombinationen
+            // Diese sind bereits aus ALLEN Paketen beim Load gezählt worden
+            if (CovCombinationCounts.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[COV-UI] Keine globalen COV-Kombinationen vorhanden");
+                return result;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[COV-UI] Verwende globale COV-Kombinationen: {CovCombinationCounts.Count} total");
+
+            // TOP 10 nach Häufigkeit sortieren (ohne Device-Objekte)
+            var covTopData = CovCombinationCounts
+                .Where(x => !x.Key.Contains("-8,"))  // Filtere Object-Type 8 (Device) aus
+                .OrderByDescending(x => x.Value)
+                .Take(10)
+                .ToList();
+
+            System.Diagnostics.Debug.WriteLine($"[COV-UI] TOP 10 COV-Kombinationen nach Filterung: {covTopData.Count}");
+
+            foreach (var item in covTopData)
+            {
+                dynamic covPacket = new System.Dynamic.ExpandoObject();
+                covPacket.DisplayFormat = item.Key;
+                covPacket.Count = item.Value;
+                result.Add(covPacket);
+            }
+
+            return result;
+        }
+
     }
 }

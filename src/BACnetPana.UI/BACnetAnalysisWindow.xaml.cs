@@ -117,13 +117,13 @@ namespace BACnetPana.UI
                 .Where(p => p.Timestamp >= startTime && p.Timestamp <= endTime)
                 .OrderBy(p => p.Timestamp)
                 .ToList();
-
             // Nur BACnet relevante Updates
             UpdateBACnetDatabaseStats();
             UpdateBACnetPacketsPerSecond(filteredPackets);
             UpdateBACnetAnalysis(filteredPackets);
             UpdateBACnetServicesAnalysis(filteredPackets);
             UpdateBACnetReadPropertiesAnalysis(filteredPackets);
+            UpdateBACnetTopCovPackets(filteredPackets);
 
             if (StartTimeLabel != null)
                 StartTimeLabel.Text = $"{startOffset:F2} s";
@@ -868,6 +868,105 @@ namespace BACnetPana.UI
                 return true;
 
             return false;
+        }
+
+        private void UpdateBACnetTopCovPackets(List<NetworkPacket> filteredPackets)
+        {
+            if (_bacnetDb == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[COV-UI] _bacnetDb ist null!");
+                if (BACnetTopCovPacketsBorder != null)
+                    BACnetTopCovPacketsBorder.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[COV-UI] UpdateBACnetTopCovPackets aufgerufen mit {filteredPackets.Count} gefilterten Paketen");
+            var topCovPackets = _bacnetDb.GetTop10CovPackets(filteredPackets);
+            System.Diagnostics.Debug.WriteLine($"[COV-UI] CovCombinationCounts count (gesamt): {_bacnetDb.CovCombinationCounts.Count}");
+            System.Diagnostics.Debug.WriteLine($"[COV-UI] Top10 CovPackets count (nach Zeitfilter): {topCovPackets.Count}");
+
+            if (topCovPackets.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[COV-UI] Keine TOP10 COV-Pakete gefunden - Border wird ausgeblendet");
+                if (BACnetTopCovPacketsBorder != null)
+                    BACnetTopCovPacketsBorder.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine("[COV-UI] TOP10 COV-Pakete gefunden - Border wird angezeigt");
+            if (BACnetTopCovPacketsBorder != null)
+                BACnetTopCovPacketsBorder.Visibility = Visibility.Visible;
+
+            if (TopCovPacketsCountLabel != null)
+            {
+                TopCovPacketsCountLabel.Text = $"Einträge: {topCovPackets.Count}";
+            }
+
+            var formattedCovPackets = topCovPackets
+                .Select(x => new
+                {
+                    CovPacket = x.DisplayFormat,
+                    Count = x.Count
+                })
+                .OrderByDescending(x => x.Count)
+                .ToList();
+
+            var barHeight = 22;
+            var desiredHeight = Math.Max(10, formattedCovPackets.Count) * barHeight;
+
+            var topCovModel = new PlotModel
+            {
+                Title = "COV-Pakete (Top 10)",
+                Background = OxyColors.White
+            };
+
+            var categoryAxis = new CategoryAxis
+            {
+                Position = AxisPosition.Left,
+                ItemsSource = formattedCovPackets,
+                LabelField = "CovPacket",
+                GapWidth = 0.5
+            };
+            topCovModel.Axes.Add(categoryAxis);
+
+            var valueAxis = new LinearAxis
+            {
+                Position = AxisPosition.Bottom,
+                Title = "Anzahl Pakete",
+                MinimumPadding = 0,
+                AbsoluteMinimum = 0,
+                MajorGridlineStyle = LineStyle.Solid,
+                MinorGridlineStyle = LineStyle.Dot,
+                MajorGridlineColor = OxyColor.FromRgb(220, 220, 220),
+                MinorGridlineColor = OxyColor.FromRgb(240, 240, 240)
+            };
+            topCovModel.Axes.Add(valueAxis);
+
+            if (TopCovPacketsChart != null)
+            {
+                TopCovPacketsChart.Height = desiredHeight;
+            }
+
+            var series = new BarSeries
+            {
+                ItemsSource = formattedCovPackets,
+                ValueField = "Count",
+                FillColor = OxyColor.FromRgb(255, 165, 0),  // Orange
+                StrokeColor = OxyColor.FromRgb(255, 140, 0), // DarkOrange
+                StrokeThickness = 1,
+                BarWidth = 0.6,
+                LabelFormatString = "{0}",
+                LabelPlacement = LabelPlacement.Inside,
+                LabelMargin = 2,
+                TextColor = OxyColors.White
+            };
+            topCovModel.Series.Add(series);
+
+            if (TopCovPacketsChart != null)
+            {
+                TopCovPacketsChart.Model = topCovModel;
+                TopCovPacketsChart.Controller = _noWheelController;
+            }
         }
     }
 }
