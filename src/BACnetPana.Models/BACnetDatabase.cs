@@ -26,14 +26,6 @@ namespace BACnetPana.Models
         // Beispiel: "40211-2,19" -> 100 (bedeutet: 100 COV-Pakete mit dieser exakten Kombination)
         public Dictionary<string, int> CovCombinationCounts { get; } = new Dictionary<string, int>();
 
-        // Debug-Zähler
-        private int _totalPacketsProcessed = 0;
-        private int _bacnetPacketsFound = 0;
-        private int _bacnetByApplicationProtocol = 0;
-        private int _bacnetByDestPort = 0;
-        private int _bacnetBySourcePort = 0;
-        private int _packetsWithDetails = 0;
-
         // TCP-Analysemetriken
         public TcpAnalysisMetrics TcpMetrics { get; } = new TcpAnalysisMetrics();
 
@@ -54,8 +46,6 @@ namespace BACnetPana.Models
         /// </summary>
         public void ProcessPacket(NetworkPacket packet)
         {
-            _totalPacketsProcessed++;
-
             var sourceIp = string.IsNullOrWhiteSpace(packet.SourceIp) ? "Unbekannt" : packet.SourceIp;
 
             // Erkenne BACnet-Pakete mit der GLEICHEN Logik wie in AnalysisWindow!
@@ -74,18 +64,11 @@ namespace BACnetPana.Models
                 AllDevices.Add(sourceIp);
             }
 
-            // Zähle was erkannt wurde
-            if (isApplicationProtocolBACnet) _bacnetByApplicationProtocol++;
-            if (isDestPortBACnet) _bacnetByDestPort++;
-            if (isSrcPortBACnet) _bacnetBySourcePort++;
-
             if (packet.Details == null || packet.Details.Count == 0)
             {
                 return;
             }
 
-            _bacnetPacketsFound++;
-            _packetsWithDetails++;
             string? instanceCandidate = null;
             string? instanceSource = null;  // Woher kommt die Instance-Number?
             string? deviceNameCandidate = null;
@@ -204,23 +187,16 @@ namespace BACnetPana.Models
                 {
                     // Bei I-Am: Immer speichern/überschreiben
                     IpToInstance[sourceIp] = instanceCandidate;
-                    System.Diagnostics.Debug.WriteLine($"[DEVICE] IP={sourceIp}: GESPEICHERT Instance={instanceCandidate} (Typ: I-Am, Quelle: {instanceSource})");
                 }
                 else if (isCov && !IpToInstance.ContainsKey(sourceIp))
                 {
                     // Bei COV-Paketen: Nur wenn noch nicht vorhanden (geringere Priorität als I-Am)
                     IpToInstance[sourceIp] = instanceCandidate;
-                    System.Diagnostics.Debug.WriteLine($"[DEVICE] IP={sourceIp}: GESPEICHERT Instance={instanceCandidate} (Typ: COV, Quelle: {instanceSource})");
                 }
                 else if (!isIAm && !isCov && !IpToInstance.ContainsKey(sourceIp))
                 {
                     // Bei anderen Paketen: Nur wenn noch nicht vorhanden
                     IpToInstance[sourceIp] = instanceCandidate;
-                    System.Diagnostics.Debug.WriteLine($"[DEVICE] IP={sourceIp}: GESPEICHERT Instance={instanceCandidate} (Typ: Sonstige, Quelle: {instanceSource})");
-                }
-                else if (IpToInstance.ContainsKey(sourceIp))
-                {
-                    System.Diagnostics.Debug.WriteLine($"[DEVICE] IP={sourceIp}: IGNORIERT Instance={instanceCandidate} (bereits vorhanden: {IpToInstance[sourceIp]})");
                 }
             }
             // Speichere Device-Namen (unabhängig von I-Am)
@@ -511,7 +487,7 @@ namespace BACnetPana.Models
                             }
                             else if (IpToInstance.ContainsKey(ip))
                             {
-                                System.Diagnostics.Debug.WriteLine($"[STEP1:COV] IP={ip} IGNORIERT (bereits vorhanden: {IpToInstance[ip]})");
+                                // Gerät bereits vorhanden, übersprungen
                             }
 
                             // Sammle und zähle COV-Kombinationen für alle Devices

@@ -874,26 +874,20 @@ namespace BACnetPana.UI
         {
             if (_bacnetDb == null)
             {
-                System.Diagnostics.Debug.WriteLine("[COV-UI] _bacnetDb ist null!");
                 if (BACnetTopCovPacketsBorder != null)
                     BACnetTopCovPacketsBorder.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[COV-UI] UpdateBACnetTopCovPackets aufgerufen mit {filteredPackets.Count} gefilterten Paketen");
             var topCovPackets = _bacnetDb.GetTop10CovPackets(filteredPackets);
-            System.Diagnostics.Debug.WriteLine($"[COV-UI] CovCombinationCounts count (gesamt): {_bacnetDb.CovCombinationCounts.Count}");
-            System.Diagnostics.Debug.WriteLine($"[COV-UI] Top10 CovPackets count (nach Zeitfilter): {topCovPackets.Count}");
 
             if (topCovPackets.Count == 0)
             {
-                System.Diagnostics.Debug.WriteLine("[COV-UI] Keine TOP10 COV-Pakete gefunden - Border wird ausgeblendet");
                 if (BACnetTopCovPacketsBorder != null)
                     BACnetTopCovPacketsBorder.Visibility = Visibility.Collapsed;
                 return;
             }
 
-            System.Diagnostics.Debug.WriteLine("[COV-UI] TOP10 COV-Pakete gefunden - Border wird angezeigt");
             if (BACnetTopCovPacketsBorder != null)
                 BACnetTopCovPacketsBorder.Visibility = Visibility.Visible;
 
