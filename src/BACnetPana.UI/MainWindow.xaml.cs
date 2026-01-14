@@ -128,6 +128,16 @@ namespace BACnetPana.UI
 
         private void WiresharkInfoButton_Click(object sender, RoutedEventArgs e)
         {
+            // Öffne das neue Help-Fenster mit Tabs
+            HelpWindow helpWindow = new HelpWindow
+            {
+                Owner = this
+            };
+            helpWindow.ShowDialog();
+        }
+
+        private void WiresharkInfoButton_Click_Old(object sender, RoutedEventArgs e)
+        {
             bool tsharkInstalled = BACnetPana.DataAccess.PcapParserFactory.IsTSharkInstalled();
 
             string message;

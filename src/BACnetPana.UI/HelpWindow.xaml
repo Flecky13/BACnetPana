@@ -1,0 +1,106 @@
+<Window x:Class="BACnetPana.UI.HelpWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BACnetPana - Hilfe" Height="600" Width="800"
+        Background="#F0F0F0"
+        FontFamily="Segoe UI"
+        Icon="icons/toolicon.ico"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResizeWithGrip">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- TabControl -->
+        <TabControl Grid.Row="0" Background="White" Margin="5">
+            <!-- Tab 1: Hilfe -->
+            <TabItem Header="📖 Hilfe" Background="White">
+                <Grid Background="White">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <StackPanel Margin="15">
+                            <!-- Wireshark/TShark Section -->
+                            <StackPanel Margin="0,0,0,15">
+                                <TextBlock Text="Wireshark/TShark Installation" FontSize="16" FontWeight="Bold" Foreground="#2D2D2D" Margin="0,0,0,10"/>
+                                <Border Background="#F5F5F5" Padding="15" CornerRadius="5">
+                                    <StackPanel>
+                                        <TextBlock Text="Status:" FontWeight="Bold" Margin="0,0,0,5"/>
+                                        <TextBlock x:Name="TSharkStatusText" TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,15"/>
+
+                                        <TextBlock Text="Anleitung:" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8">
+                                            <Run>1. Besuchen Sie </Run>
+                                            <Hyperlink Foreground="#0078D4" x:Name="WiresharkLink">https://www.wireshark.org/download.html</Hyperlink>
+                                        </TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8">2. Laden Sie die neueste Version von Wireshark herunter und installieren Sie sie</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8">3. TShark wird automatisch mit Wireshark installiert</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,15">4. Starten Sie die BACnetPana-Anwendung neu</TextBlock>
+
+                                        <TextBlock Text="Funktionen mit TShark:" FontWeight="Bold" Margin="0,0,0,10"/>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Alle BACnet-Services (ReadProperty, WriteProperty, etc.)</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Object Types und Instance Numbers</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Property Identifiers</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Vendor-Informationen</TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Anwendung Section -->
+                            <StackPanel Margin="0,0,0,15">
+                                <TextBlock Text="Anwendung verwenden" FontSize="16" FontWeight="Bold" Foreground="#2D2D2D" Margin="0,0,0,10"/>
+                                <Border Background="#F5F5F5" Padding="15" CornerRadius="5">
+                                    <StackPanel>
+                                        <TextBlock Text="Schritte:" FontWeight="Bold" Margin="0,0,0,8"/>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8">1. Klicken Sie auf "📁 PCAP öffnen", um eine PCAP-Datei zu laden</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8">2. Nach dem Laden können Sie zwischen zwei Analysemodi wählen:</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• 🔄 Allg. Analyse - Zeigt allgemeine Netzwerk-Statistiken</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• 🏢 BACnet Analyse - Detaillierte BACnet-Protokollanalyse</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,8">• 🔍 Filter - Über Protokolle können Sie für Analysen vorfiltern</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,0">3. Die Ergebnisse werden in den entsprechenden Tabs angezeigt</TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Unterstützte Formate -->
+                            <StackPanel>
+                                <TextBlock Text="Unterstützte Dateiformate" FontSize="16" FontWeight="Bold" Foreground="#2D2D2D" Margin="0,0,0,10"/>
+                                <Border Background="#F5F5F5" Padding="15" CornerRadius="5">
+                                    <StackPanel>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8">Die Anwendung unterstützt folgende Dateiformate:</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• .pcap (standard Wireshark-Format)</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• .pcapng (neueres Wireshark-Format mit mehr Metadaten)</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• .cap (alternative Dateiendung)</TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
+            <!-- Tab 2: Weitere Informationen (vorbereitet) -->
+            <TabItem Header="ℹ️ Weitere Informationen" Background="White">
+                <Grid Background="White">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+                        <StackPanel Margin="15">
+                            <TextBlock Text="Weitere Informationen" FontSize="16" FontWeight="Bold" Foreground="#2D2D2D" Margin="0,0,0,10"/>
+                            <TextBlock Text="Dieser Tab ist für zukünftige Erweiterungen reserviert." Foreground="#666666" FontSize="14" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,15"/>
+                            <TextBlock Text="Geplante Inhalte:" FontSize="14" FontWeight="Bold" Foreground="#2D2D2D" Margin="0,0,0,10"/>
+                            <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Tipps und Tricks</TextBlock>
+                            <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Häufig gestellte Fragen (FAQ)</TextBlock>
+                            <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Über die Anwendung</TextBlock>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- Footer with Close Button -->
+        <Border Grid.Row="1" Background="#F5F5F5" Padding="10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button x:Name="CloseButton" Padding="20,8" MinWidth="100" Background="#6264A7" Foreground="White" FontSize="13" FontWeight="SemiBold" Click="CloseButton_Click">Schließen</Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
