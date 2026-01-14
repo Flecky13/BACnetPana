@@ -638,8 +638,9 @@ namespace BACnetPana.Models
         /// Gibt die TOP 10 COV-Kombinationen für die UI zurück (Kompatibilität mit bestehendem Code)
         /// Filtert nach den übergebenen Paketen (Zeitfenster-Filterung)
         /// </summary>
-        public List<dynamic> GetTop10CovPackets(List<NetworkPacket> filteredPackets, double durationInSeconds = 0)
+        public List<dynamic> GetTop10CovPackets(List<NetworkPacket> filteredPackets, out int totalCovCount, double durationInSeconds = 0)
         {
+            totalCovCount = 0;
             var result = new List<dynamic>();
 
             if (filteredPackets == null || filteredPackets.Count == 0)
@@ -712,6 +713,8 @@ namespace BACnetPana.Models
                     !packet.Details.TryGetValue("Instance Number", out var instancesStr))
                     continue;
 
+                totalCovCount++; // Zähle alle COV-Pakete (nur wenn sie vollständige Details haben)
+
                 // Extrahiere Device-Instance
                 string? deviceInstance = null;
                 if (packet.Details.TryGetValue("Initiating Device Identifier", out var deviceId))
@@ -766,7 +769,7 @@ namespace BACnetPana.Models
                 }
             }
 
-            System.Diagnostics.Debug.WriteLine($"[COV-UI] COV-Kombinationen aus gefilterten Paketen: {covCombinationCounts.Count} total");
+            System.Diagnostics.Debug.WriteLine($"[COV-UI] Gesamtanzahl COV-Pakete: {totalCovCount}, eindeutige Kombinationen: {covCombinationCounts.Count}");
 
             // TOP 10 nach Häufigkeit sortieren (ohne Device-Objekte)
             var covTopData = covCombinationCounts

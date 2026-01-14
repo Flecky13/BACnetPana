@@ -886,7 +886,7 @@ namespace BACnetPana.UI
                 duration = EndTimeSlider.Value - StartTimeSlider.Value;
             }
 
-            var topCovPackets = _bacnetDb.GetTop10CovPackets(filteredPackets, duration);
+            var topCovPackets = _bacnetDb.GetTop10CovPackets(filteredPackets, out int totalCovCount, duration);
 
             if (topCovPackets.Count == 0)
             {
@@ -898,9 +898,11 @@ namespace BACnetPana.UI
             if (BACnetTopCovPacketsBorder != null)
                 BACnetTopCovPacketsBorder.Visibility = Visibility.Visible;
 
+            // Zeige Gesamtanzahl mit Durchschnitt /s
             if (TopCovPacketsCountLabel != null)
             {
-                TopCovPacketsCountLabel.Text = $"Einträge: {topCovPackets.Count}";
+                double ratePerSecond = duration > 0 ? totalCovCount / duration : 0;
+                TopCovPacketsCountLabel.Text = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/s", totalCovCount, ratePerSecond);
             }
 
             var formattedCovPackets = topCovPackets

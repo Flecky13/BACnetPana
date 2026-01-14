@@ -3,7 +3,7 @@
 ## Gesamtablauf beim PCAP-Import
 
 ```
-[STEP1] Start: Extrahiere I-Am Devices...
+[STEP1] Start: Extrahiere Device Instanzen...
 [STEP1] Gefunden: 45 Zeilen zur Analyse
 [STEP1:IAM] Gerät 1: IP=192.168.1.10, Instance=1001
 [STEP1:IAM]   └─ Quelle: Feld 'bacapp.instance_number' aus I-Am Paket (TShark)

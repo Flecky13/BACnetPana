@@ -194,8 +194,8 @@ namespace BACnetPana.Core.ViewModels
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    progressCallback("Phase 2/2", "Start: Extrahiere I-Am Devices", 0);
-                    AddLog("Phase 2: Extrahiere I-Am Devices...");
+                    progressCallback("Phase 2/2", "Start: Extrahiere Device Instanzen", 0);
+                    AddLog("Phase 2: Extrahiere Device Instanzen...");
 
                     // Timer für STEP1 Animation
                     System.Timers.Timer? animationTimer = null;

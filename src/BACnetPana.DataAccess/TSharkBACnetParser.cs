@@ -118,14 +118,14 @@ namespace BACnetPana.DataAccess
             var packets = new List<NetworkPacket>();
             BACnetDb = new BACnetDatabase(); // Reset bei jedem neuen File
 
-            // Schritt 1: Extrahiere I-Am Devices direkt aus PCAP mit tshark
-            ProgressChanged?.Invoke(this, "[ANIM]Start: Extrahiere I-Am Devices");
+            // Schritt 1: Extrahiere Device Instanzen direkt aus PCAP mit tshark
+            ProgressChanged?.Invoke(this, "[ANIM]Start: Extrahiere Device Instanzen");
             BACnetDb.ExtractIAmDevicesFromPcap(filePath);
             ProgressChanged?.Invoke(this, $"[DONE:1]Gefunden: {BACnetDb.IpToInstance.Count} BACnet-Geräte");
 
             try
             {
-                ProgressChanged?.Invoke(this, "[STEP2]Process gestartet, lese JSON : 0 MB Gelesen");
+                ProgressChanged?.Invoke(this, "[STEP2]Paket Analyse gestartet, lese Daten : 0 MB Gelesen");
 
                 // TShark-Aufruf mit JSON-Export
                 // -r: Lese PCAP-Datei
@@ -262,7 +262,7 @@ namespace BACnetPana.DataAccess
                             writer.Flush();
                             long actualFileSizeMB = fileStream.Length / 1024 / 1024; // Echte Dateigröße
                             // Format: [STEP2]Text mit echte MB
-                            ProgressChanged?.Invoke(this, $"[STEP2]Process gestartet, lese JSON : {actualFileSizeMB} MB Gelesen");
+                            ProgressChanged?.Invoke(this, $"[STEP2]Paket Analyse gestartet, lese Daten : {actualFileSizeMB} MB Gelesen");
                             lastProgressUpdate = totalCharsRead;
                             cancellationToken.ThrowIfCancellationRequested();
                         }
@@ -270,7 +270,7 @@ namespace BACnetPana.DataAccess
                 }
 
                 long fileSizeMB = new FileInfo(tempFilePath).Length / 1024 / 1024;
-                ProgressChanged?.Invoke(this, $"[STEP2]Process gestartet, lese JSON : {fileSizeMB} MB Gelesen");
+                ProgressChanged?.Invoke(this, $"[STEP2]Paket Analyse gestartet, lese Daten : {fileSizeMB} MB Gelesen");
 
                 // Jetzt parse das JSON aus der temporären Datei
                 using (var fileStream = new FileStream(tempFilePath, FileMode.Open, FileAccess.Read, FileShare.Read))
