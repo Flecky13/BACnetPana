@@ -879,7 +879,14 @@ namespace BACnetPana.UI
                 return;
             }
 
-            var topCovPackets = _bacnetDb.GetTop10CovPackets(filteredPackets);
+            // Berechne die aktuelle Zeitspanne der gefilterten Pakete
+            var duration = _totalDuration;
+            if (StartTimeSlider != null && EndTimeSlider != null)
+            {
+                duration = EndTimeSlider.Value - StartTimeSlider.Value;
+            }
+
+            var topCovPackets = _bacnetDb.GetTop10CovPackets(filteredPackets, duration);
 
             if (topCovPackets.Count == 0)
             {
@@ -900,7 +907,9 @@ namespace BACnetPana.UI
                 .Select(x => new
                 {
                     CovPacket = x.DisplayFormat,
-                    Count = x.Count
+                    Count = x.Count,
+                    RatePerSecond = x.RatePerSecond,
+                    DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/s", x.Count, x.RatePerSecond)
                 })
                 .OrderByDescending(x => x.Count)
                 .ToList();
@@ -943,17 +952,38 @@ namespace BACnetPana.UI
 
             var series = new BarSeries
             {
-                ItemsSource = formattedCovPackets,
-                ValueField = "Count",
                 FillColor = OxyColor.FromRgb(255, 165, 0),  // Orange
                 StrokeColor = OxyColor.FromRgb(255, 140, 0), // DarkOrange
                 StrokeThickness = 1,
                 BarWidth = 0.6,
-                LabelFormatString = "{0}",
                 LabelPlacement = LabelPlacement.Inside,
                 LabelMargin = 2,
                 TextColor = OxyColors.White
             };
+
+            // Manuelles Hinzufügen von BarItems und Annotations
+            for (int i = 0; i < formattedCovPackets.Count; i++)
+            {
+                var item = formattedCovPackets[i];
+                var barItem = new BarItem
+                {
+                    Value = item.Count,
+                    CategoryIndex = i
+                };
+                series.Items.Add(barItem);
+
+                var annotation = new OxyPlot.Annotations.TextAnnotation
+                {
+                    Text = item.DisplayValue,
+                    TextPosition = new DataPoint(item.Count / 2.0, i),
+                    TextHorizontalAlignment = OxyPlot.HorizontalAlignment.Center,
+                    TextVerticalAlignment = OxyPlot.VerticalAlignment.Middle,
+                    TextColor = OxyColors.White,
+                    Stroke = OxyColors.Transparent,
+                    StrokeThickness = 0
+                };
+                topCovModel.Annotations.Add(annotation);
+            }
             topCovModel.Series.Add(series);
 
             if (TopCovPacketsChart != null)

@@ -638,22 +638,138 @@ namespace BACnetPana.Models
         /// Gibt die TOP 10 COV-Kombinationen für die UI zurück (Kompatibilität mit bestehendem Code)
         /// Filtert nach den übergebenen Paketen (Zeitfenster-Filterung)
         /// </summary>
-        public List<dynamic> GetTop10CovPackets(List<NetworkPacket> filteredPackets)
+        public List<dynamic> GetTop10CovPackets(List<NetworkPacket> filteredPackets, double durationInSeconds = 0)
         {
             var result = new List<dynamic>();
 
-            // Verwende die bereits gezählten globalen COV-Kombinationen
-            // Diese sind bereits aus ALLEN Paketen beim Load gezählt worden
-            if (CovCombinationCounts.Count == 0)
+            if (filteredPackets == null || filteredPackets.Count == 0)
             {
-                System.Diagnostics.Debug.WriteLine("[COV-UI] Keine globalen COV-Kombinationen vorhanden");
+                System.Diagnostics.Debug.WriteLine("[COV-UI] Keine gefilterten Pakete vorhanden");
                 return result;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[COV-UI] Verwende globale COV-Kombinationen: {CovCombinationCounts.Count} total");
+            // Filtere zuerst nach BACnet-Paketen (wie bei ReadProperties)
+            var bacnetPackets = filteredPackets.Where(p =>
+                (p.ApplicationProtocol?.ToUpper() == "BACNET") ||
+                (p.DestinationPort >= 47808 && p.DestinationPort <= 47823) ||
+                (p.SourcePort >= 47808 && p.SourcePort <= 47823)).ToList();
+
+            if (bacnetPackets.Count == 0)
+            {
+                System.Diagnostics.Debug.WriteLine("[COV-UI] Keine BACnet-Pakete in gefilterten Paketen vorhanden");
+                return result;
+            }
+
+            // Zähle COV-Kombinationen aus den gefilterten BACnet-Paketen
+            var covCombinationCounts = new Dictionary<string, int>();
+
+            foreach (var packet in bacnetPackets)
+            {
+                if (packet.Details == null || packet.Details.Count == 0)
+                    continue;
+
+                // Prüfe sowohl Confirmed als auch Unconfirmed Services auf COV
+                int? serviceCode = null;
+                bool isCov = false;
+
+                // Prüfe Unconfirmed Service
+                if (packet.Details.ContainsKey("BACnet Unconfirmed Service"))
+                {
+                    var unconfService = packet.Details["BACnet Unconfirmed Service"];
+                    serviceCode = GetServiceCode(packet.Details, "BACnet Unconfirmed Service Code", "BACnet Unconfirmed Service");
+
+                    // Unconfirmed COV Service Code: 2=UnconfirmedCOVNotification
+                    isCov = serviceCode.HasValue && serviceCode.Value == 2;
+
+                    if (!isCov && unconfService != null)
+                    {
+                        var svcLower = unconfService.ToLowerInvariant();
+                        isCov = svcLower.Contains("cov");
+                    }
+                }
+
+                // Prüfe Confirmed Service
+                if (!isCov && packet.Details.ContainsKey("BACnet Confirmed Service"))
+                {
+                    var confService = packet.Details["BACnet Confirmed Service"];
+                    serviceCode = GetServiceCode(packet.Details, "BACnet Confirmed Service Code", "BACnet Confirmed Service");
+
+                    // Confirmed COV Service Codes: 1=ConfirmedCOVNotification, 5=SubscribeCOV, 28=SubscribeCOVProperty
+                    isCov = serviceCode.HasValue && (serviceCode.Value == 1 || serviceCode.Value == 5 || serviceCode.Value == 28);
+
+                    if (!isCov && confService != null)
+                    {
+                        var svcLower = confService.ToLowerInvariant();
+                        isCov = svcLower.Contains("cov");
+                    }
+                }
+
+                if (!isCov)
+                    continue;
+
+                // Extrahiere Object Types und Instance Numbers
+                if (!packet.Details.TryGetValue("Object Type", out var objectTypesStr) ||
+                    !packet.Details.TryGetValue("Instance Number", out var instancesStr))
+                    continue;
+
+                // Extrahiere Device-Instance
+                string? deviceInstance = null;
+                if (packet.Details.TryGetValue("Initiating Device Identifier", out var deviceId))
+                {
+                    deviceInstance = ExtractInstanceNumber(deviceId);
+                }
+
+                // Splitte die durch Komma getrennten Werte (falls mehrere vorhanden)
+                var objectTypes = objectTypesStr.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+                var instances = instancesStr.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (objectTypes.Length == 0 || instances.Length == 0)
+                    continue;
+
+                // Wenn keine Device-Instance gefunden, versuche aus Object-Type 8 zu extrahieren
+                if (string.IsNullOrWhiteSpace(deviceInstance))
+                {
+                    for (int i = 0; i < objectTypes.Length && i < instances.Length; i++)
+                    {
+                        if (objectTypes[i].Trim() == "8")
+                        {
+                            deviceInstance = ExtractInstanceNumber(instances[i].Trim());
+                            break;
+                        }
+                    }
+                }
+
+                // Falls immer noch keine Device-Instance: Verwende SourceIP als Fallback
+                if (string.IsNullOrWhiteSpace(deviceInstance))
+                {
+                    deviceInstance = packet.SourceIp ?? "unknown";
+                }
+
+                // Zähle jede eindeutige Kombination: "Device-ObjectType,Instance"
+                for (int i = 0; i < objectTypes.Length && i < instances.Length; i++)
+                {
+                    string objType = objectTypes[i].Trim();
+                    string inst = ExtractInstanceNumber(instances[i].Trim());
+
+                    if (string.IsNullOrWhiteSpace(inst))
+                        inst = instances[i].Trim(); // Fallback auf ungefilterten Wert
+
+                    if (!string.IsNullOrWhiteSpace(inst))
+                    {
+                        // Erstelle eindeutigen Kombinationsschlüssel: "40211-2,19"
+                        string combinationKey = $"{deviceInstance}-{objType},{inst}";
+
+                        if (!covCombinationCounts.ContainsKey(combinationKey))
+                            covCombinationCounts[combinationKey] = 0;
+                        covCombinationCounts[combinationKey]++;
+                    }
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[COV-UI] COV-Kombinationen aus gefilterten Paketen: {covCombinationCounts.Count} total");
 
             // TOP 10 nach Häufigkeit sortieren (ohne Device-Objekte)
-            var covTopData = CovCombinationCounts
+            var covTopData = covCombinationCounts
                 .Where(x => !x.Key.Contains("-8,"))  // Filtere Object-Type 8 (Device) aus
                 .OrderByDescending(x => x.Value)
                 .Take(10)
@@ -666,10 +782,54 @@ namespace BACnetPana.Models
                 dynamic covPacket = new System.Dynamic.ExpandoObject();
                 covPacket.DisplayFormat = item.Key;
                 covPacket.Count = item.Value;
+
+                // Berechne Rate pro Sekunde, wenn Zeitspanne gegeben ist
+                if (durationInSeconds > 0)
+                {
+                    covPacket.RatePerSecond = item.Value / durationInSeconds;
+                }
+                else
+                {
+                    covPacket.RatePerSecond = 0.0;
+                }
+
                 result.Add(covPacket);
             }
 
             return result;
+        }
+
+        private static int? GetServiceCode(Dictionary<string, string> details, string codeKey, string valueKey)
+        {
+            if (details.TryGetValue(codeKey, out var codeStr))
+            {
+                if (int.TryParse(codeStr, out var parsedCode))
+                    return parsedCode;
+            }
+
+            if (details.TryGetValue(valueKey, out var valueStr))
+            {
+                if (TryParseServiceCode(valueStr, out var parsedCode))
+                    return parsedCode;
+            }
+
+            return null;
+        }
+
+        private static bool TryParseServiceCode(string? serviceValue, out int serviceCode)
+        {
+            serviceCode = -1;
+            if (string.IsNullOrWhiteSpace(serviceValue))
+                return false;
+
+            if (int.TryParse(serviceValue.Trim(), out serviceCode))
+                return true;
+
+            var digits = new string(serviceValue.Where(char.IsDigit).ToArray());
+            if (!string.IsNullOrEmpty(digits) && int.TryParse(digits, out serviceCode))
+                return true;
+
+            return false;
         }
 
     }
