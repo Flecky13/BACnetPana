@@ -18,7 +18,7 @@
 ---
 
 ## Voraussetzungen
-- **.NET 10.0**
+- **.NET 8.0**
 - **Wireshark** (empfohlen) - enthält TShark für vollständige BACnet-Analyse
   - Download: https://www.wireshark.org/download.html
 - Ohne TShark: eingeschränkte BACnet-Unterstützung via SharpPcap
