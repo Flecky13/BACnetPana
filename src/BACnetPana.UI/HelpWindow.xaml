@@ -79,17 +79,49 @@
                 </Grid>
             </TabItem>
 
-            <!-- Tab 2: Weitere Informationen (vorbereitet) -->
-            <TabItem Header="ℹ️ Weitere Informationen" Background="White">
+            <!-- Tab 2: Über & Updates -->
+            <TabItem Header="📦 Updates &amp; Infos" Background="White">
                 <Grid Background="White">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
                         <StackPanel Margin="15">
-                            <TextBlock Text="Weitere Informationen" FontSize="16" FontWeight="Bold" Foreground="#2D2D2D" Margin="0,0,0,10"/>
-                            <TextBlock Text="Dieser Tab ist für zukünftige Erweiterungen reserviert." Foreground="#666666" FontSize="14" TextWrapping="Wrap" LineHeight="20" Margin="0,0,0,15"/>
-                            <TextBlock Text="Geplante Inhalte:" FontSize="14" FontWeight="Bold" Foreground="#2D2D2D" Margin="0,0,0,10"/>
-                            <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Tipps und Tricks</TextBlock>
-                            <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Häufig gestellte Fragen (FAQ)</TextBlock>
-                            <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Über die Anwendung</TextBlock>
+                            <!-- Update Check Section -->
+                            <StackPanel Margin="0,0,0,15">
+                                <TextBlock Text="🔄 Update-Prüfung" FontSize="16" FontWeight="Bold" Foreground="#2D2D2D" Margin="0,0,0,10"/>
+                                <Border Background="#F5F5F5" Padding="15" CornerRadius="5">
+                                    <StackPanel>
+                                        <TextBlock x:Name="UpdateStatusTextBlock" TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,10"/>
+                                        <TextBlock x:Name="ReleaseNotesTextBlock" TextWrapping="Wrap" Foreground="#555555" FontSize="12" LineHeight="16" Margin="0,0,0,15" Text=""/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button x:Name="CheckForUpdatesButton" Padding="15,8" MinWidth="130" Background="#0078D4" Foreground="White" FontSize="12" Margin="0,0,10,0">🔄 Jetzt prüfen</Button>
+                                            <Button x:Name="DownloadUpdateButton" Padding="15,8" MinWidth="130" Background="#28A745" Foreground="White" FontSize="12" Click="DownloadUpdateButton_Click">⬇️ Herunterladen</Button>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
+                            <!-- Anwendungs-Info Section -->
+                            <StackPanel Margin="0,0,0,15">
+                                <TextBlock Text="ℹ️ Anwendungs-Informationen" FontSize="16" FontWeight="Bold" Foreground="#2D2D2D" Margin="0,0,0,10"/>
+                                <Border Background="#F5F5F5" Padding="15" CornerRadius="5">
+                                    <StackPanel>
+                                        <TextBlock x:Name="VersionTextBlock" TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8" FontSize="13"/>
+                                        <TextBlock x:Name="AuthorTextBlock" TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8" FontSize="13"/>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8" FontSize="13">
+                                            <Run>Repository: </Run>
+                                            <Hyperlink x:Name="RepositoryLink" Foreground="#0078D4" NavigateUri="https://github.com/Flecky13/BACnetPana">https://github.com/Flecky13/BACnetPana</Hyperlink>
+                                        </TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8" FontSize="13">
+                                            <Run>Support: </Run>
+                                            <Hyperlink x:Name="SupportLink" Foreground="#0078D4" NavigateUri="https://buymeacoffee.com/pedrotepe">https://buymeacoffee.com/pedrotepe</Hyperlink>
+                                        </TextBlock>
+                                        <TextBlock Text="Basierend auf:" FontWeight="Bold" Margin="0,10,0,5"/>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• SharpPcap - PCAP-Datei Parsing</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Wireshark/TShark - BACnet-Protokoll-Unterstützung</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• .NET 10 - Moderne Technologie</TextBlock>
+                                    </StackPanel>
+                                </Border>
+                            </StackPanel>
+
                         </StackPanel>
                     </ScrollViewer>
                 </Grid>
