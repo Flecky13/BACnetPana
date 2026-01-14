@@ -2,11 +2,9 @@
 
 ![Alt text](images/APP.png)
 
----
+## Netzwerk-Analyse für BACnet & PCAP-Dateien
 
-## 📋 Übersicht
-
-**BACnetPana** bietet eine leistungsstarke Schnittstelle zur Analyse von Netzwerkpaketen aus PCAP/Wireshark-Dateien mit Fokus auf BACnet-Protokollanalyse.
+**BACnetPana** analysiert PCAP-Dateien mit Fokus auf BACnet-Protokolle.
 
 ### Hauptfunktionen
 - ✅ **Vollständige BACnet-Analyse**: Mit TShark (Wireshark) alle BACnet-Services, Object Types und Properties
@@ -19,28 +17,8 @@
 
 ---
 
-## ⚡ Voraussetzungen
-
-### Empfohlen für vollständige BACnet-Unterstützung:
-
-**Wireshark Installation** (enthält TShark)
-- Download: https://www.wireshark.org/download.html
-- TShark wird automatisch mit Wireshark installiert
-- Ermöglicht vollständige BACnet-Protokollanalyse
-
-### Ohne Wireshark:
-- Die Anwendung funktioniert auch ohne TShark
-- Verwendet SharpPcap als Fallback
-- ⚠️ Eingeschränkte BACnet-Unterstützung (nur grundlegende Erkennung)
-
----
-
-### PacketStatistics
-Aggregierte Statistiken über alle Pakete:
-- Gesamt-Zähler (Pakete, Bytes)
-- Protokoll-Verteilung
-- Top IP-Adressen (Source/Destination)
-- Port-Häufigkeiten
-- Durchsatz (Mbps), PPS
-
----
+## Voraussetzungen
+- **.NET 10.0**
+- **Wireshark** (empfohlen) - enthält TShark für vollständige BACnet-Analyse
+  - Download: https://www.wireshark.org/download.html
+- Ohne TShark: eingeschränkte BACnet-Unterstützung via SharpPcap
