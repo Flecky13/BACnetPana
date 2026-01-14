@@ -93,7 +93,7 @@
                                         <TextBlock x:Name="ReleaseNotesTextBlock" TextWrapping="Wrap" Foreground="#555555" FontSize="12" LineHeight="16" Margin="0,0,0,15" Text=""/>
                                         <StackPanel Orientation="Horizontal">
                                             <Button x:Name="CheckForUpdatesButton" Padding="15,8" MinWidth="130" Background="#0078D4" Foreground="White" FontSize="12" Margin="0,0,10,0">🔄 Jetzt prüfen</Button>
-                                            <Button x:Name="DownloadUpdateButton" Padding="15,8" MinWidth="130" Background="#28A745" Foreground="White" FontSize="12" Click="DownloadUpdateButton_Click">⬇️ Herunterladen</Button>
+                                            <Button x:Name="DownloadUpdateButton" Padding="15,8" MinWidth="130" Background="#28A745" Foreground="White" FontSize="12" Click="DownloadUpdateButton_Click">⚙️ Installieren</Button>
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>

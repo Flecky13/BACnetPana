@@ -12,11 +12,31 @@ namespace BACnetPana.Core
     /// </summary>
     public class UpdateService
     {
-        private const string GitHubApiUrl = "https://api.github.com/repos/Flecky13/BACnetPana/releases/latest";
+        private const string GitHubApiLatestUrl = "https://api.github.com/repos/Flecky13/BACnetPana/releases/latest";
+        private const string GitHubApiAllReleasesUrl = "https://api.github.com/repos/Flecky13/BACnetPana/releases";
         private const string GitHubRepoUrl = "https://github.com/Flecky13/BACnetPana/releases";
-        private const string CurrentVersion = "1.3.0.0";
+        private static string CurrentVersion = GetCurrentVersion();
         private const string AppName = "BACnetPana";
         private const string Author = "Flecky13";
+
+        /// <summary>
+        /// Liest die aktuelle Version aus der Assembly
+        /// </summary>
+        private static string GetCurrentVersion()
+        {
+            try
+            {
+                var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+                if (version != null)
+                {
+                    return $"{version.Major}.{version.Minor}.{version.Build}.{version.Revision}";
+                }
+            }
+            catch { }
+
+            // Fallback
+            return "1.0.0.0";
+        }
 
         public class VersionInfo
         {
@@ -44,73 +64,185 @@ namespace BACnetPana.Core
             try
             {
                 using var httpClient = new HttpClient();
+                httpClient.Timeout = TimeSpan.FromSeconds(10);
                 httpClient.DefaultRequestHeaders.Add("User-Agent", $"{AppName}/{CurrentVersion}");
 
-                var response = await httpClient.GetAsync(GitHubApiUrl);
-                if (!response.IsSuccessStatusCode)
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Prüfe auf Updates... CurrentVersion: {CurrentVersion}");
+
+                // Versuche zuerst latest endpoint
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Versuche /latest endpoint");
+                var json = await TryGetReleaseJson(httpClient, GitHubApiLatestUrl);
+
+                // Falls leer (z.B. nur Drafts/Pre-releases), versuche alle releases
+                if (string.IsNullOrEmpty(json))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[UpdateService] GitHub API Fehler: {response.StatusCode}");
+                    System.Diagnostics.Debug.WriteLine($"[UpdateService] /latest leer, versuche alle releases");
+                    json = await TryGetReleaseJsonFromAll(httpClient, GitHubApiAllReleasesUrl);
+                }
+
+                if (string.IsNullOrEmpty(json))
+                {
+                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Keine Release-Daten gefunden");
                     return versionInfo;
                 }
 
-                var json = await response.Content.ReadAsStringAsync();
-                using var jsonDoc = JsonDocument.Parse(json);
-                var root = jsonDoc.RootElement;
-
-                // Extrahiere Version aus dem Tag-Namen (z.B. "v1.4.0" -> "1.4.0")
-                if (root.TryGetProperty("tag_name", out var tagElement))
-                {
-                    var tagName = tagElement.GetString();
-                    versionInfo.LatestVersion = tagName?.TrimStart('v') ?? CurrentVersion;
-
-                    // Prüfe ob Update verfügbar ist
-                    if (CompareVersions(versionInfo.LatestVersion, CurrentVersion) > 0)
-                    {
-                        versionInfo.UpdateAvailable = true;
-                    }
-                }
-
-                // Extrahiere Download-URL
-                if (root.TryGetProperty("assets", out var assetsElement) && assetsElement.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var asset in assetsElement.EnumerateArray())
-                    {
-                        if (asset.TryGetProperty("browser_download_url", out var urlElement))
-                        {
-                            var url = urlElement.GetString();
-                            // Suche nach .exe oder .zip Datei
-                            if (url?.Contains(".exe") == true || url?.Contains(".zip") == true)
-                            {
-                                versionInfo.DownloadUrl = url;
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // Extrahiere Release Notes
-                if (root.TryGetProperty("body", out var bodyElement))
-                {
-                    versionInfo.ReleaseNotes = bodyElement.GetString() ?? string.Empty;
-                }
-
-                // Extrahiere Release Date
-                if (root.TryGetProperty("published_at", out var dateElement))
-                {
-                    if (DateTime.TryParse(dateElement.GetString(), out var releaseDate))
-                    {
-                        versionInfo.ReleaseDate = releaseDate;
-                    }
-                }
-
-                System.Diagnostics.Debug.WriteLine($"[UpdateService] Update-Check erfolgreich. Neueste Version: {versionInfo.LatestVersion}, Update verfügbar: {versionInfo.UpdateAvailable}");
+                // Parse JSON
+                ParseReleaseInfo(json, versionInfo);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[UpdateService] Fehler beim Update-Check: {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Stack-Trace: {ex.StackTrace}");
             }
 
             return versionInfo;
+        }
+
+        /// <summary>
+        /// Versucht, den /latest Endpoint zu lesen
+        /// </summary>
+        private async Task<string> TryGetReleaseJson(HttpClient httpClient, string url)
+        {
+            try
+            {
+                var response = await httpClient.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Response von {url}: {json.Length} Bytes");
+                    return json;
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Fehler bei {url}: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Fehler beim Abrufen von {url}: {ex.Message}");
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Versucht, aus dem /releases Array die neueste Release zu finden
+        /// </summary>
+        private async Task<string> TryGetReleaseJsonFromAll(HttpClient httpClient, string url)
+        {
+            try
+            {
+                var response = await httpClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[UpdateService] Fehler bei {url}: {response.StatusCode}");
+                    return string.Empty;
+                }
+
+                var json = await response.Content.ReadAsStringAsync();
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Response von {url}: {json.Length} Bytes");
+
+                using var jsonDoc = JsonDocument.Parse(json);
+                var root = jsonDoc.RootElement;
+
+                if (root.ValueKind == JsonValueKind.Array && root.GetArrayLength() > 0)
+                {
+                    // Finde die neueste nicht-Draft Release
+                    foreach (var release in root.EnumerateArray())
+                    {
+                        bool isDraft = false;
+                        if (release.TryGetProperty("draft", out var draftProp))
+                        {
+                            isDraft = draftProp.GetBoolean();
+                        }
+
+                        if (!isDraft && release.TryGetProperty("tag_name", out _))
+                        {
+                            // Gib diese Release als JSON zurück
+                            return release.GetRawText();
+                        }
+                    }
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Keine gültige Release im Array gefunden");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Fehler beim Abrufen aller Releases: {ex.Message}");
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Parst die Release-Informationen aus dem JSON
+        /// </summary>
+        private void ParseReleaseInfo(string json, VersionInfo versionInfo)
+        {
+            using var jsonDoc = JsonDocument.Parse(json);
+            var root = jsonDoc.RootElement;
+
+            // Extrahiere Version aus dem Tag-Namen (z.B. "v1.4.0" oder "V1.3.1.0" -> "1.4.0" oder "1.3.1.0")
+            if (root.TryGetProperty("tag_name", out var tagElement))
+            {
+                var tagName = tagElement.GetString();
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Tag-Name aus GitHub: {tagName}");
+                // Entferne sowohl kleine als auch große 'v' am Anfang
+                versionInfo.LatestVersion = tagName?.TrimStart('v', 'V') ?? CurrentVersion;
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Bereinigter Version: {versionInfo.LatestVersion}");
+
+                // Prüfe ob Update verfügbar ist
+                var comparison = CompareVersions(versionInfo.LatestVersion, CurrentVersion);
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Versionsvergleich: {versionInfo.LatestVersion} vs {CurrentVersion} = {comparison}");
+
+                if (comparison > 0)
+                {
+                    versionInfo.UpdateAvailable = true;
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Kein 'tag_name' Feld gefunden");
+            }
+
+            // Extrahiere Download-URL
+            if (root.TryGetProperty("assets", out var assetsElement) && assetsElement.ValueKind == JsonValueKind.Array)
+            {
+                var assetCount = 0;
+                foreach (var asset in assetsElement.EnumerateArray())
+                {
+                    assetCount++;
+                    if (asset.TryGetProperty("browser_download_url", out var urlElement))
+                    {
+                        var url = urlElement.GetString();
+                        System.Diagnostics.Debug.WriteLine($"[UpdateService] Asset {assetCount}: {url}");
+                        // Suche nach .exe oder .zip Datei
+                        if (url?.Contains(".exe") == true || url?.Contains(".zip") == true)
+                        {
+                            versionInfo.DownloadUrl = url;
+                            System.Diagnostics.Debug.WriteLine($"[UpdateService] Download-URL gesetzt: {url}");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Extrahiere Release Notes
+            if (root.TryGetProperty("body", out var bodyElement))
+            {
+                versionInfo.ReleaseNotes = bodyElement.GetString() ?? string.Empty;
+            }
+
+            // Extrahiere Release Date
+            if (root.TryGetProperty("published_at", out var dateElement))
+            {
+                if (DateTime.TryParse(dateElement.GetString(), out var releaseDate))
+                {
+                    versionInfo.ReleaseDate = releaseDate;
+                }
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[UpdateService] Update-Check erfolgreich. Neueste Version: {versionInfo.LatestVersion}, Update verfügbar: {versionInfo.UpdateAvailable}");
         }
 
         /// <summary>
@@ -172,10 +304,19 @@ namespace BACnetPana.Core
             {
                 var version1 = new Version(v1);
                 var version2 = new Version(v2);
-                return version1.CompareTo(version2);
+                var result = version1.CompareTo(version2);
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Version-Parse erfolgreich: {v1} -> {version1}");
+                return result;
             }
-            catch
+            catch (FormatException ex)
             {
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] FEHLER beim Version-Parse: {v1} (Fehler: {ex.Message})");
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] Verwende default Vergleich (0 = gleich)");
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[UpdateService] UNERWARTETER Fehler beim Versionsvergleich: {ex.Message}");
                 return 0;
             }
         }

@@ -123,15 +123,56 @@ namespace BACnetPana.UI
             }
         }
 
-        private void DownloadUpdateButton_Click(object sender, RoutedEventArgs e)
+        private async void DownloadUpdateButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                _updateService.OpenGitHubReleasePage();
+                DownloadUpdateButton.IsEnabled = false;
+                UpdateStatusTextBlock.Text = "⏳ Lade Setup herunter und starte Installation...";
+                UpdateStatusTextBlock.Foreground = System.Windows.Media.Brushes.Gray;
+
+                // Erstelle Pfad für Setup-Datei
+                string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "BACnetPana_Setup.exe");
+
+                // Ermittle Download-URL - müssen von der UpdateService abrufen
+                var versionInfo = await _updateService.CheckForUpdatesAsync();
+
+                if (string.IsNullOrEmpty(versionInfo.DownloadUrl))
+                {
+                    MessageBox.Show("Keine Download-URL für die Update-Datei gefunden.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                    DownloadUpdateButton.IsEnabled = true;
+                    return;
+                }
+
+                // Download der Setup-Datei
+                bool downloadSuccess = await _updateService.DownloadUpdateAsync(versionInfo.DownloadUrl, tempPath);
+
+                if (!downloadSuccess)
+                {
+                    MessageBox.Show("Fehler beim Herunterladen der Setup-Datei.", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                    DownloadUpdateButton.IsEnabled = true;
+                    return;
+                }
+
+                UpdateStatusTextBlock.Text = "✅ Setup heruntergeladen. Starte Installation...";
+                UpdateStatusTextBlock.Foreground = System.Windows.Media.Brushes.Green;
+
+                // Starte die Setup-Datei
+                ProcessStartInfo psi = new ProcessStartInfo
+                {
+                    FileName = tempPath,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+
+                // Warte kurz, dann beende die Anwendung
+                await Task.Delay(1000);
+                Application.Current.Shutdown();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Fehler beim Öffnen der Release-Seite: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Fehler beim Update-Prozess: {ex.Message}", "Fehler", MessageBoxButton.OK, MessageBoxImage.Error);
+                DownloadUpdateButton.IsEnabled = true;
             }
         }
 
