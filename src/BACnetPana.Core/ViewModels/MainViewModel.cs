@@ -6,10 +6,10 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using BACnetPana.Models;
-using BACnetPana.DataAccess;
+using bacneTPana.Models;
+using bacneTPana.DataAccess;
 
-namespace BACnetPana.Core.ViewModels
+namespace bacneTPana.Core.ViewModels
 {
     public partial class MainViewModel : ObservableObject
     {

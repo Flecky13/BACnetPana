@@ -3,9 +3,9 @@ using System.Windows;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows.Navigation;
-using BACnetPana.Core;
+using bacneTPana.Core;
 
-namespace BACnetPana.UI
+namespace bacneTPana.UI
 {
     public partial class HelpWindow : Window
     {
@@ -22,7 +22,7 @@ namespace BACnetPana.UI
         private void InitializeHelpContent()
         {
             // Prüfe TShark-Status und aktualisiere Text
-            bool tsharkInstalled = BACnetPana.DataAccess.PcapParserFactory.IsTSharkInstalled();
+            bool tsharkInstalled = bacneTPana.DataAccess.PcapParserFactory.IsTSharkInstalled();
 
             if (tsharkInstalled)
             {
@@ -132,7 +132,7 @@ namespace BACnetPana.UI
                 UpdateStatusTextBlock.Foreground = System.Windows.Media.Brushes.Gray;
 
                 // Erstelle Pfad für Setup-Datei
-                string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "BACnetPana_Setup.exe");
+                string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "bacneTPana_Setup.exe");
 
                 // Ermittle Download-URL - müssen von der UpdateService abrufen
                 var versionInfo = await _updateService.CheckForUpdatesAsync();

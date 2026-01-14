@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace BACnetPana.Models
+namespace bacneTPana.Models
 {
     /// <summary>
     /// Repräsentiert einen gespeicherten Analysezustand

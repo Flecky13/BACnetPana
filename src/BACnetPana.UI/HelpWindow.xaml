@@ -1,7 +1,7 @@
-<Window x:Class="BACnetPana.UI.HelpWindow"
+<Window x:Class="bacneTPana.UI.HelpWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="BACnetPana - Hilfe" Height="600" Width="800"
+        Title="bacneTPana - Hilfe" Height="600" Width="800"
         Background="#F0F0F0"
         FontFamily="Segoe UI"
         Icon="icons/toolicon.ico"
@@ -35,7 +35,7 @@
                                         </TextBlock>
                                         <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8">2. Laden Sie die neueste Version von Wireshark herunter und installieren Sie sie</TextBlock>
                                         <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8">3. TShark wird automatisch mit Wireshark installiert</TextBlock>
-                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,15">4. Starten Sie die BACnetPana-Anwendung neu</TextBlock>
+                                        <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,15">4. Starten Sie die bacneTPana-Anwendung neu</TextBlock>
 
                                         <TextBlock Text="Funktionen mit TShark:" FontWeight="Bold" Margin="0,0,0,10"/>
                                         <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="20,0,0,0">• Alle BACnet-Services (ReadProperty, WriteProperty, etc.)</TextBlock>
@@ -108,7 +108,7 @@
                                         <TextBlock x:Name="AuthorTextBlock" TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8" FontSize="13"/>
                                         <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8" FontSize="13">
                                             <Run>Repository: </Run>
-                                            <Hyperlink x:Name="RepositoryLink" Foreground="#0078D4" NavigateUri="https://github.com/Flecky13/BACnetPana">https://github.com/Flecky13/BACnetPana</Hyperlink>
+                                            <Hyperlink x:Name="RepositoryLink" Foreground="#0078D4" NavigateUri="https://github.com/Flecky13/bacneTPana">https://github.com/Flecky13/bacneTPana</Hyperlink>
                                         </TextBlock>
                                         <TextBlock TextWrapping="Wrap" Foreground="#333333" LineHeight="18" Margin="0,0,0,8" FontSize="13">
                                             <Run>Support: </Run>

@@ -2,7 +2,7 @@ using System;
 using System.Windows;
 using System.Windows.Threading;
 
-namespace BACnetPana.UI
+namespace bacneTPana.UI
 {
     public partial class ProgressWindow : Window
     {

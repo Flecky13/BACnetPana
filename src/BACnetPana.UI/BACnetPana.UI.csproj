@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
-    <Version>1.4.0.0</Version>
-    <AssemblyName>BACnetPana</AssemblyName>
+    <Version>1.5.0.0</Version>
+    <AssemblyName>bacneTPana</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,9 +26,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BACnetPana.Core\BACnetPana.Core.csproj" />
-    <ProjectReference Include="..\BACnetPana.Models\BACnetPana.Models.csproj" />
-    <ProjectReference Include="..\BACnetPana.DataAccess\BACnetPana.DataAccess.csproj" />
+    <ProjectReference Include="..\bacneTPana.Core\bacneTPana.Core.csproj" />
+    <ProjectReference Include="..\bacneTPana.Models\bacneTPana.Models.csproj" />
+    <ProjectReference Include="..\bacneTPana.DataAccess\bacneTPana.DataAccess.csproj" />
   </ItemGroup>
 
 </Project>

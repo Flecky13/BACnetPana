@@ -1,6 +1,6 @@
 using System;
 
-namespace BACnetPana.DataAccess
+namespace bacneTPana.DataAccess
 {
     /// <summary>
     /// Factory für PCAP-Parser - wählt zwischen TShark und SharpPcap
@@ -85,7 +85,7 @@ namespace BACnetPana.DataAccess
     public interface IPcapParser
     {
         event EventHandler<string>? ProgressChanged;
-        BACnetPana.Models.BACnetDatabase BACnetDb { get; }
-        System.Threading.Tasks.Task<System.Collections.Generic.List<BACnetPana.Models.NetworkPacket>> ReadPcapFileAsync(string filePath, System.Threading.CancellationToken cancellationToken = default);
+        bacneTPana.Models.BACnetDatabase BACnetDb { get; }
+        System.Threading.Tasks.Task<System.Collections.Generic.List<bacneTPana.Models.NetworkPacket>> ReadPcapFileAsync(string filePath, System.Threading.CancellationToken cancellationToken = default);
     }
 }

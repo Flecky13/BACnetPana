@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using BACnetPana.Models;
+using bacneTPana.Models;
 
-namespace BACnetPana.DataAccess
+namespace bacneTPana.DataAccess
 {
     /// <summary>
     /// Handles statistics calculation for packet data

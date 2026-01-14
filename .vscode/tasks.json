@@ -2,7 +2,7 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Build BACnetPana",
+			"label": "Build bacneTPana",
 			"type": "shell",
 			"command": "dotnet",
 			"args": [
@@ -15,7 +15,7 @@
 			"group": "build"
 		},
 		{
-			"label": "Build BACnetPana (TCP-only AnalysisWindow)",
+			"label": "Build bacneTPana (TCP-only AnalysisWindow)",
 			"type": "shell",
 			"command": "dotnet",
 			"args": [

@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 using SharpPcap;
 using SharpPcap.LibPcap;
 using PacketDotNet;
-using BACnetPana.Models;
+using bacneTPana.Models;
 
-namespace BACnetPana.DataAccess
+namespace bacneTPana.DataAccess
 {
     /// <summary>
     /// Responsible for parsing and reading PCAP/PCAPNG files (Wireshark format)

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
-namespace BACnetPana.Models
+namespace bacneTPana.Models
 {
     /// <summary>
     /// Datenbasis für BACnet-Informationen, aufgebaut während des PCAP-Einlesens

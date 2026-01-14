@@ -1,17 +1,17 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.0.31903.59
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11408.102 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BACnetPana.UI", "src\BACnetPana.UI\BACnetPana.UI.csproj", "{59AC2BB2-77F0-48D1-A17D-AE1B6067BCAF}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bacneTPana.UI", "src\bacneTPana.UI\bacneTPana.UI.csproj", "{59AC2BB2-77F0-48D1-A17D-AE1B6067BCAF}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BACnetPana.Core", "src\BACnetPana.Core\BACnetPana.Core.csproj", "{F97B8063-9161-4865-B9DE-69CC4E4C3669}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bacneTPana.Core", "src\bacneTPana.Core\bacneTPana.Core.csproj", "{F97B8063-9161-4865-B9DE-69CC4E4C3669}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BACnetPana.Models", "src\BACnetPana.Models\BACnetPana.Models.csproj", "{51431C79-702F-419F-81EB-F121C4ED4128}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bacneTPana.Models", "src\bacneTPana.Models\bacneTPana.Models.csproj", "{51431C79-702F-419F-81EB-F121C4ED4128}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BACnetPana.DataAccess", "src\BACnetPana.DataAccess\BACnetPana.DataAccess.csproj", "{A07ACB04-A0A5-47D7-9B4B-15BDFD712C53}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "bacneTPana.DataAccess", "src\bacneTPana.DataAccess\bacneTPana.DataAccess.csproj", "{A07ACB04-A0A5-47D7-9B4B-15BDFD712C53}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

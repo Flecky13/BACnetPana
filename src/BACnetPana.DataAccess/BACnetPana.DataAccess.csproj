@@ -4,7 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Version>1.4.0.0</Version>
+    <Version>1.5.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\BACnetPana.Models\BACnetPana.Models.csproj" />
+    <ProjectReference Include="..\bacneTPana.Models\bacneTPana.Models.csproj" />
   </ItemGroup>
 
 </Project>

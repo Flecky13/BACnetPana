@@ -1,6 +1,6 @@
 using System;
 
-namespace BACnetPana.Models
+namespace bacneTPana.Models
 {
     /// <summary>
     /// Aggregierte TCP-Analysemetriken, gesammelt beim Einlesen der PCAP-Datei.

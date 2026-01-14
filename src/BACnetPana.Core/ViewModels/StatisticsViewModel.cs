@@ -1,9 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
-using BACnetPana.Models;
+using bacneTPana.Models;
 
-namespace BACnetPana.Core.ViewModels
+namespace bacneTPana.Core.ViewModels
 {
     public partial class StatisticsViewModel : ObservableObject
     {

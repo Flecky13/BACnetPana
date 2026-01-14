@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace BACnetPana.Models
+namespace bacneTPana.Models
 {
     /// <summary>
     /// Informationen zu unterstützten Netzwerkprotokollen

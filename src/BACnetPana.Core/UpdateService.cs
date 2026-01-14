@@ -5,18 +5,18 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace BACnetPana.Core
+namespace bacneTPana.Core
 {
     /// <summary>
     /// Service für Update-Überprüfung gegen GitHub Releases
     /// </summary>
     public class UpdateService
     {
-        private const string GitHubApiLatestUrl = "https://api.github.com/repos/Flecky13/BACnetPana/releases/latest";
-        private const string GitHubApiAllReleasesUrl = "https://api.github.com/repos/Flecky13/BACnetPana/releases";
-        private const string GitHubRepoUrl = "https://github.com/Flecky13/BACnetPana/releases";
+        private const string GitHubApiLatestUrl = "https://api.github.com/repos/Flecky13/bacneTPana/releases/latest";
+        private const string GitHubApiAllReleasesUrl = "https://api.github.com/repos/Flecky13/bacneTPana/releases";
+        private const string GitHubRepoUrl = "https://github.com/Flecky13/bacneTPana/releases";
         private static string CurrentVersion = GetCurrentVersion();
-        private const string AppName = "BACnetPana";
+        private const string AppName = "bacneTPana";
         private const string Author = "Flecky13";
 
         /// <summary>

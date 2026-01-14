@@ -5,10 +5,10 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using Microsoft.Win32;
-using BACnetPana.Core.ViewModels;
-using BACnetPana.Models;
+using bacneTPana.Core.ViewModels;
+using bacneTPana.Models;
 
-namespace BACnetPana.UI
+namespace bacneTPana.UI
 {
     public partial class MainWindow : Window
     {
@@ -138,7 +138,7 @@ namespace BACnetPana.UI
 
         private void WiresharkInfoButton_Click_Old(object sender, RoutedEventArgs e)
         {
-            bool tsharkInstalled = BACnetPana.DataAccess.PcapParserFactory.IsTSharkInstalled();
+            bool tsharkInstalled = bacneTPana.DataAccess.PcapParserFactory.IsTSharkInstalled();
 
             string message;
             string title;

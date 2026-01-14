@@ -1,10 +1,10 @@
-# bacnetPana - Network Analysis Software
+# bacneTPana - Network Analysis Software
 
 ![Alt text](images/APP.png)
 
 ## Network Analysis for BACnet & PCAP Files
 
-**bacnetPana** analyzes PCAP files with focus on BACnet protocols.
+**bacneTPana** analyzes PCAP files with focus on BACnet protocols.
 
 ### Key Features
 - ✅ **Complete BACnet Analysis**: With TShark (Wireshark) all BACnet services, object types, and properties

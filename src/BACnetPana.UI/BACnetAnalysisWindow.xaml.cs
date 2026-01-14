@@ -7,12 +7,12 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using BACnetPana.Models;
+using bacneTPana.Models;
 using OxyPlot;
 using OxyPlot.Series;
 using OxyPlot.Axes;
 
-namespace BACnetPana.UI
+namespace bacneTPana.UI
 {
     public partial class BACnetAnalysisWindow : Window
     {
