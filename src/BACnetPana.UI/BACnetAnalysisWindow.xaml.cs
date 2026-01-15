@@ -328,40 +328,53 @@ namespace bacneTPana.UI
             var durationMinutes = durationSeconds / 60.0;
             var whoIsPerMinute = durationMinutes > 0 ? whoIsCount / durationMinutes : 0;
             var whoHasPerMinute = durationMinutes > 0 ? whoHasCount / durationMinutes : 0;
-            var broadcastPerSecond = durationSeconds > 0 ? broadcastCount / durationSeconds : 0;
+            var broadcastPerMinute = durationMinutes > 0 ? broadcastCount / durationMinutes : 0;
+            var simpleAckPerMinute = durationMinutes > 0 ? simpleAckCount / durationMinutes : 0;
+            var complexAckPerMinute = durationMinutes > 0 ? complexAckCount / durationMinutes : 0;
+            var iAmPerMinute = durationMinutes > 0 ? iAmCount / durationMinutes : 0;
+            var iHavePerMinute = durationMinutes > 0 ? iHaveCount / durationMinutes : 0;
+            var readPropertyPerMinute = durationMinutes > 0 ? readPropertyCount / durationMinutes : 0;
+            var readPropertyMultPerMinute = durationMinutes > 0 ? readPropertyMultCount / durationMinutes : 0;
+            var writePropertyPerMinute = durationMinutes > 0 ? writePropertyCount / durationMinutes : 0;
+            var writePropertyMultPerMinute = durationMinutes > 0 ? writePropertyMultCount / durationMinutes : 0;
+            var subscribeCovPerMinute = durationMinutes > 0 ? subscribeCOVCount / durationMinutes : 0;
+            var subscribeCovPropPerMinute = durationMinutes > 0 ? subscribeCOVPropCount / durationMinutes : 0;
+            var confCovNotifPerMinute = durationMinutes > 0 ? confCOVNotifCount / durationMinutes : 0;
+            var confEventNotifPerMinute = durationMinutes > 0 ? confEventNotifCount / durationMinutes : 0;
+            var errorPerMinute = durationMinutes > 0 ? errorCount / durationMinutes : 0;
 
             if (BACnetBroadcastsLabel != null)
-                BACnetBroadcastsLabel.Text = $"{broadcastPerSecond:F2}/s ({broadcastCount} total)";
+                BACnetBroadcastsLabel.Text = $"{broadcastPerMinute:F2}/min ({broadcastCount} total)";
             if (BACnetSimpleAckLabel != null)
-                BACnetSimpleAckLabel.Text = $"{simpleAckCount} total";
+                BACnetSimpleAckLabel.Text = $"{simpleAckPerMinute:F2}/min ({simpleAckCount} total)";
             if (BACnetComplexAckLabel != null)
-                BACnetComplexAckLabel.Text = $"{complexAckCount} total";
+                BACnetComplexAckLabel.Text = $"{complexAckPerMinute:F2}/min ({complexAckCount} total)";
             if (BACnetWhoIsLabel != null)
                 BACnetWhoIsLabel.Text = $"{whoIsPerMinute:F2}/min ({whoIsCount} total)";
             if (BACnetWhoHasLabel != null)
                 BACnetWhoHasLabel.Text = $"{whoHasPerMinute:F2}/min ({whoHasCount} total)";
             if (BACnetIAmLabel != null)
-                BACnetIAmLabel.Text = $"{iAmCount} total";
+                BACnetIAmLabel.Text = $"{iAmPerMinute:F2}/min ({iAmCount} total)";
             if (BACnetIHaveLabel != null)
-                BACnetIHaveLabel.Text = $"{iHaveCount} total";
+                BACnetIHaveLabel.Text = $"{iHavePerMinute:F2}/min ({iHaveCount} total)";
             if (BACnetReadPropertyLabel != null)
-                BACnetReadPropertyLabel.Text = $"{readPropertyCount} total";
+                BACnetReadPropertyLabel.Text = $"{readPropertyPerMinute:F2}/min ({readPropertyCount} total)";
             if (BACnetReadPropertyMultLabel != null)
-                BACnetReadPropertyMultLabel.Text = $"{readPropertyMultCount} total";
+                BACnetReadPropertyMultLabel.Text = $"{readPropertyMultPerMinute:F2}/min ({readPropertyMultCount} total)";
             if (BACnetWritePropertyLabel != null)
-                BACnetWritePropertyLabel.Text = $"{writePropertyCount} total";
+                BACnetWritePropertyLabel.Text = $"{writePropertyPerMinute:F2}/min ({writePropertyCount} total)";
             if (BACnetWritePropertyMultLabel != null)
-                BACnetWritePropertyMultLabel.Text = $"{writePropertyMultCount} total";
+                BACnetWritePropertyMultLabel.Text = $"{writePropertyMultPerMinute:F2}/min ({writePropertyMultCount} total)";
             if (BACnetSubscribeCOVLabel != null)
-                BACnetSubscribeCOVLabel.Text = $"{subscribeCOVCount} total";
+                BACnetSubscribeCOVLabel.Text = $"{subscribeCovPerMinute:F2}/min ({subscribeCOVCount} total)";
             if (BACnetSubscribeCOVPropLabel != null)
-                BACnetSubscribeCOVPropLabel.Text = $"{subscribeCOVPropCount} total";
+                BACnetSubscribeCOVPropLabel.Text = $"{subscribeCovPropPerMinute:F2}/min ({subscribeCOVPropCount} total)";
             if (BACnetConfCOVNotifLabel != null)
-                BACnetConfCOVNotifLabel.Text = $"{confCOVNotifCount} total";
+                BACnetConfCOVNotifLabel.Text = $"{confCovNotifPerMinute:F2}/min ({confCOVNotifCount} total)";
             if (BACnetConfEventNotifLabel != null)
-                BACnetConfEventNotifLabel.Text = $"{confEventNotifCount} total";
+                BACnetConfEventNotifLabel.Text = $"{confEventNotifPerMinute:F2}/min ({confEventNotifCount} total)";
             if (BACnetErrorLabel != null)
-                BACnetErrorLabel.Text = $"{errorCount} total";
+                BACnetErrorLabel.Text = $"{errorPerMinute:F2}/min ({errorCount} total)";
         }
 
         private bool IsBroadcast(NetworkPacket packet)
@@ -895,11 +908,11 @@ namespace bacneTPana.UI
             if (BACnetTopCovPacketsBorder != null)
                 BACnetTopCovPacketsBorder.Visibility = Visibility.Visible;
 
-            // Zeige Gesamtanzahl mit Durchschnitt /s
+            // Zeige Gesamtanzahl mit Durchschnitt /min
             if (TopCovPacketsCountLabel != null)
             {
-                double ratePerSecond = duration > 0 ? totalCovCount / duration : 0;
-                TopCovPacketsCountLabel.Text = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/s", totalCovCount, ratePerSecond);
+                double ratePerMinute = duration > 0 ? (totalCovCount / duration) * 60 : 0;
+                TopCovPacketsCountLabel.Text = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", totalCovCount, ratePerMinute);
             }
 
             var formattedCovPackets = topCovPackets
@@ -907,8 +920,8 @@ namespace bacneTPana.UI
                 {
                     CovPacket = x.DisplayFormat,
                     Count = x.Count,
-                    RatePerSecond = x.RatePerSecond,
-                    DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/s", x.Count, x.RatePerSecond)
+                    RatePerMinute = x.RatePerMinute,
+                    DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", x.Count, x.RatePerMinute)
                 })
                 .OrderByDescending(x => x.Count)
                 .ToList();

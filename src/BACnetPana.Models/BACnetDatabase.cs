@@ -781,14 +781,14 @@ namespace bacneTPana.Models
                 covPacket.DisplayFormat = item.Key;
                 covPacket.Count = item.Value;
 
-                // Berechne Rate pro Sekunde, wenn Zeitspanne gegeben ist
+                // Berechne Rate pro Minute, wenn Zeitspanne gegeben ist
                 if (durationInSeconds > 0)
                 {
-                    covPacket.RatePerSecond = item.Value / durationInSeconds;
+                    covPacket.RatePerMinute = (item.Value / durationInSeconds) * 60;
                 }
                 else
                 {
-                    covPacket.RatePerSecond = 0.0;
+                    covPacket.RatePerMinute = 0.0;
                 }
 
                 result.Add(covPacket);
