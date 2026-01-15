@@ -1,7 +1,6 @@
-using System;
-using System.Collections.ObjectModel;
-using CommunityToolkit.Mvvm.ComponentModel;
 using bacneTPana.Models;
+using CommunityToolkit.Mvvm.ComponentModel;
+using System.Collections.ObjectModel;
 
 namespace bacneTPana.Core.ViewModels
 {

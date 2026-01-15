@@ -1,13 +1,8 @@
-using System;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
+using bacneTPana.DataAccess;
+using bacneTPana.Models;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using bacneTPana.Models;
-using bacneTPana.DataAccess;
+using System.Collections.ObjectModel;
 
 namespace bacneTPana.Core.ViewModels
 {

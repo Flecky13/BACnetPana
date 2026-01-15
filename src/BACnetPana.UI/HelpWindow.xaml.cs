@@ -1,9 +1,7 @@
-using System;
-using System.Windows;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Windows.Navigation;
 using bacneTPana.Core;
+using System.Diagnostics;
+using System.Windows;
+using System.Windows.Navigation;
 
 namespace bacneTPana.UI
 {

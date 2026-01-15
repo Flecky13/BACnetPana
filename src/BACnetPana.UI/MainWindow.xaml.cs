@@ -1,12 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using bacneTPana.Core.ViewModels;
+using bacneTPana.Models;
+using Microsoft.Win32;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using Microsoft.Win32;
-using bacneTPana.Core.ViewModels;
-using bacneTPana.Models;
 
 namespace bacneTPana.UI
 {

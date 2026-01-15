@@ -1,16 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.Linq;
+using bacneTPana.Models;
+using OxyPlot;
+using OxyPlot.Axes;
+using OxyPlot.Series;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
-using bacneTPana.Models;
-using OxyPlot;
-using OxyPlot.Series;
-using OxyPlot.Axes;
 
 namespace bacneTPana.UI
 {

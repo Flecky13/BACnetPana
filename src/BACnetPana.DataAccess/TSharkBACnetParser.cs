@@ -1,12 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 using bacneTPana.Models;
+using System.Diagnostics;
+using System.Text.Json;
 
 namespace bacneTPana.DataAccess
 {

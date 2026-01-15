@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using bacneTPana.Models;
+using PacketDotNet;
 using SharpPcap;
 using SharpPcap.LibPcap;
-using PacketDotNet;
-using bacneTPana.Models;
 
 namespace bacneTPana.DataAccess
 {
