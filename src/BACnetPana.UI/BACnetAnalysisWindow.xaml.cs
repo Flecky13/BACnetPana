@@ -266,6 +266,14 @@ namespace bacneTPana.UI
             }
         }
 
+        private void TopDevicesChart_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (TopDevicesInfoLabel != null)
+            {
+                TopDevicesInfoLabel.Text = "Bewegen Sie die Maus über einen Balken für Details zum Gerät.";
+            }
+        }
+
         // Reuse BACnet-specific update methods from AnalysisWindow implementation
         private void UpdateBACnetAnalysis(List<NetworkPacket> filteredPackets)
         {
@@ -596,6 +604,12 @@ namespace bacneTPana.UI
                 TopDevicesChart.Model = topDevicesModel;
                 TopDevicesChart.Controller = _noWheelController;
             }
+
+            // Initialer Hinweistext (kompakt)
+            if (TopDevicesInfoLabel != null)
+            {
+                TopDevicesInfoLabel.Text = "Bewegen Sie die Maus über einen Balken für Details zum Gerät.";
+            }
         }
 
         private void UpdateBACnetReadPropertiesAnalysis(List<NetworkPacket> filteredPackets)
@@ -705,11 +719,14 @@ namespace bacneTPana.UI
             if (TopReadPropertyCountLabel != null)
                 TopReadPropertyCountLabel.Text = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", totalReadPropertyCount, perMinute);
 
+            var totalTopCount = topReadProps.Sum(x => x.Count);
             var topReadPropsWithRate = topReadProps.Select(x => new
             {
                 x.Label,
                 x.Count,
-                DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", x.Count, durationMinutes > 0 ? x.Count / durationMinutes : 0)
+                Percentage = totalTopCount > 0 ? (x.Count * 100.0) / totalTopCount : 0.0,
+                PerMinute = durationMinutes > 0 ? x.Count / durationMinutes : 0.0,
+                DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} ({1:F1}%)", x.Count, totalTopCount > 0 ? (x.Count * 100.0) / totalTopCount : 0.0)
             }).ToList();
 
             var barHeight = 22;
@@ -759,6 +776,7 @@ namespace bacneTPana.UI
                 TextColor = OxyColors.White
             };
 
+            model.Annotations.Clear();
             for (int i = 0; i < topReadPropsWithRate.Count; i++)
             {
                 var item = topReadPropsWithRate[i];
@@ -788,6 +806,67 @@ namespace bacneTPana.UI
             {
                 ReadPropertyTopChart.Model = model;
                 ReadPropertyTopChart.Controller = _noWheelController;
+            }
+
+            // Initialer Hinweistext (kompakt)
+            if (TopReadPropertyInfoLabel != null)
+            {
+                TopReadPropertyInfoLabel.Text = "Bewegen Sie die Maus über einen Balken für Details zum Eintrag.";
+            }
+        }
+
+        private void ReadPropertyTopChart_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (ReadPropertyTopChart?.Model == null)
+                return;
+
+            var model = ReadPropertyTopChart.Model;
+            var categoryAxis = model.Axes.FirstOrDefault(a => a is CategoryAxis) as CategoryAxis;
+            if (categoryAxis == null)
+                return;
+
+            var pos = e.GetPosition(ReadPropertyTopChart);
+            var yData = categoryAxis.InverseTransform(pos.Y);
+            var series = model.Series.OfType<BarSeries>().FirstOrDefault();
+            if (series == null || series.Items.Count == 0)
+                return;
+
+            var index = (int)Math.Round(yData);
+            index = Math.Max(0, Math.Min(series.Items.Count - 1, index));
+
+            // Rekonstruiere die Datenquelle, die in CategoryAxis.ItemsSource verwendet wurde
+            var itemsSource = (model.Axes.OfType<CategoryAxis>().FirstOrDefault()?.ItemsSource as System.Collections.IList);
+            if (itemsSource == null || index >= itemsSource.Count)
+                return;
+
+            dynamic item = itemsSource[index];
+            try
+            {
+                int count = (int)item.Count;
+                double percentage = (double)item.Percentage;
+                double perMinute = (double)item.PerMinute;
+                string label = (string)item.Label;
+
+                var info = $"Eintrag: {label}\n" +
+                           $"Gesamt: {count}\n" +
+                           $"Durchschnitt: {perMinute:F2}/Min\n" +
+                           $"Rel. Verteilung: {percentage:F1}%";
+
+                if (TopReadPropertyInfoLabel != null)
+                    TopReadPropertyInfoLabel.Text = info;
+            }
+            catch
+            {
+                if (TopReadPropertyInfoLabel != null)
+                    TopReadPropertyInfoLabel.Text = "Bewegen Sie die Maus über die Balken, um Details anzuzeigen...";
+            }
+        }
+
+        private void ReadPropertyTopChart_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (TopReadPropertyInfoLabel != null)
+            {
+                TopReadPropertyInfoLabel.Text = "Bewegen Sie die Maus über einen Balken für Details zum Eintrag.";
             }
         }
 
