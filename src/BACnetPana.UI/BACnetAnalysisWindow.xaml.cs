@@ -719,14 +719,13 @@ namespace bacneTPana.UI
             if (TopReadPropertyCountLabel != null)
                 TopReadPropertyCountLabel.Text = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", totalReadPropertyCount, perMinute);
 
-            var totalTopCount = topReadProps.Sum(x => x.Count);
             var topReadPropsWithRate = topReadProps.Select(x => new
             {
                 x.Label,
                 x.Count,
-                Percentage = totalTopCount > 0 ? (x.Count * 100.0) / totalTopCount : 0.0,
+                Percentage = totalReadPropertyCount > 0 ? (x.Count * 100.0) / totalReadPropertyCount : 0.0,
                 PerMinute = durationMinutes > 0 ? x.Count / durationMinutes : 0.0,
-                DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} ({1:F1}%)", x.Count, totalTopCount > 0 ? (x.Count * 100.0) / totalTopCount : 0.0)
+                DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} ({1:F1}%)", x.Count, totalReadPropertyCount > 0 ? (x.Count * 100.0) / totalReadPropertyCount : 0.0)
             }).ToList();
 
             var barHeight = 22;
@@ -1091,13 +1090,12 @@ namespace bacneTPana.UI
                 TopCovPacketsCountLabel.Text = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", totalCovCount, ratePerMinute);
             }
 
-            var totalTopCount = topCovPackets.Sum(x => (int)x.Count);
             var formattedCovPackets = topCovPackets
                 .Select(x =>
                 {
                     var count = (int)x.Count;
                     var ratePerMinute = duration > 0 ? (count / duration) * 60.0 : 0.0;
-                    var percentage = totalTopCount > 0 ? (count * 100.0) / totalTopCount : 0.0;
+                    var percentage = totalCovCount > 0 ? (count * 100.0) / totalCovCount : 0.0;
                     return new
                     {
                         CovPacket = x.DisplayFormat,
