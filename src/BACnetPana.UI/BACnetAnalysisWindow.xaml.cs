@@ -21,6 +21,17 @@ namespace bacneTPana.UI
         private readonly string _activeFilter;
         private DispatcherTimer? _debounceTimer;
         private BACnetDatabase _bacnetDb;
+        private List<DeviceBarInfo>? _topDevicesForHover;
+
+        private class DeviceBarInfo
+        {
+            public string Device { get; set; } = string.Empty;
+            public int Count { get; set; }
+            public string Id { get; set; } = string.Empty;
+            public double Percentage { get; set; }
+            public double AveragePerMinute { get; set; }
+            public string Ip { get; set; } = string.Empty;
+        }
 
         public BACnetAnalysisWindow(List<NetworkPacket> packets, string activeFilter, BACnetDatabase? bacnetDatabase = null)
         {
@@ -228,6 +239,33 @@ namespace bacneTPana.UI
             return null;
         }
 
+        private void TopDevicesChart_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (TopDevicesChart?.Model == null || _topDevicesForHover == null || _topDevicesForHover.Count == 0)
+                return;
+
+            var position = e.GetPosition(TopDevicesChart);
+            var categoryAxis = TopDevicesChart.Model.Axes.FirstOrDefault(a => a is CategoryAxis) as CategoryAxis;
+            if (categoryAxis == null)
+                return;
+
+            // Transformiere Y-Koordinate zu Kategoriendatenindex
+            var yData = categoryAxis.InverseTransform(position.Y);
+            var index = (int)Math.Round(yData);
+            index = Math.Max(0, Math.Min(_topDevicesForHover.Count - 1, index));
+
+            var item = _topDevicesForHover[index];
+            var infoText = $"Gerät: {item.Device}\n" +
+                           $"Gesamt: {item.Count} Anfragen\n" +
+                           $"Durchschnitt: {item.AveragePerMinute:F2}/Min\n" +
+                           $"Rel. Verteilung: {item.Percentage:F1}%";
+
+            if (TopDevicesInfoLabel != null)
+            {
+                TopDevicesInfoLabel.Text = infoText;
+            }
+        }
+
         // Reuse BACnet-specific update methods from AnalysisWindow implementation
         private void UpdateBACnetAnalysis(List<NetworkPacket> filteredPackets)
         {
@@ -402,6 +440,13 @@ namespace bacneTPana.UI
             if (BACnetTopDevicesBorder != null)
                 BACnetTopDevicesBorder.Visibility = Visibility.Visible;
 
+            // Berechne Zeitspanne für Durchschnittsberechnung
+            var timeSpanMinutes = _totalDuration / 60.0; // _totalDuration ist in Sekunden
+            if (StartTimeSlider != null && EndTimeSlider != null)
+            {
+                timeSpanMinutes = (EndTimeSlider.Value - StartTimeSlider.Value) / 60.0;
+            }
+
             var deviceRequests = bacnetPackets
                 .GroupBy(p => string.IsNullOrWhiteSpace(p.SourceIp) ? "Unbekannt" : p.SourceIp)
                 .Select(g => new
@@ -425,13 +470,19 @@ namespace bacneTPana.UI
                 });
             }
 
+            var totalRequestCount = deviceRequests.Sum(x => x.Count);
+
             var formattedDevices = deviceRequests
                 .Select(x => new
                 {
                     Device = !string.IsNullOrWhiteSpace(x.Instance)
                         ? $"{x.Instance} ({x.Ip})"
                         : $"nicht ermittelbar ({x.Ip})",
-                    Count = x.Count
+                    Count = x.Count,
+                    Id = x.Instance != null ? x.Instance : x.Ip,
+                    Percentage = totalRequestCount > 0 ? (x.Count * 100.0) / totalRequestCount : 0,
+                    AveragePerMinute = timeSpanMinutes > 0 ? x.Count / timeSpanMinutes : 0,
+                    Ip = x.Ip
                 })
                 .OrderByDescending(x => x.Count)
                 .ToList();
@@ -442,7 +493,19 @@ namespace bacneTPana.UI
                 TopDevicesCountLabel.Text = $"Geräte: {totalDevices}";
             }
 
-            var topDevices = formattedDevices.Take(10).ToList();
+            var topDevices = formattedDevices
+                .Take(10)
+                .Select(x => new DeviceBarInfo
+                {
+                    Device = x.Device,
+                    Count = x.Count,
+                    Id = x.Id ?? string.Empty,
+                    Percentage = x.Percentage,
+                    AveragePerMinute = x.AveragePerMinute,
+                    Ip = x.Ip
+                })
+                .ToList();
+            _topDevicesForHover = topDevices;
             var barHeight = 22;
             var desiredHeight = Math.Max(10, topDevices.Count) * barHeight;
 
@@ -479,19 +542,53 @@ namespace bacneTPana.UI
                 TopDevicesChart.Height = desiredHeight;
             }
 
+            // Erstelle BarItems manuell mit benutzerdefinierten Labels
+            var barItems = new List<BarItem>();
+            foreach (var device in topDevices)
+            {
+                var barItem = new BarItem
+                {
+                    Value = device.Count,
+                    CategoryIndex = barItems.Count
+                };
+                barItems.Add(barItem);
+            }
+
             var series = new BarSeries
             {
-                ItemsSource = topDevices,
-                ValueField = "Count",
+                ItemsSource = barItems,
                 FillColor = OxyColor.FromRgb(23, 162, 184),
                 StrokeColor = OxyColor.FromRgb(18, 130, 147),
                 StrokeThickness = 1,
                 BarWidth = 0.6,
-                LabelFormatString = "{0}",
                 LabelPlacement = LabelPlacement.Inside,
                 LabelMargin = 2,
                 TextColor = OxyColors.White
             };
+
+            // Entferne alte Annotationen und setze benutzerdefinierte Labels mit Anzahl und Prozent
+            topDevicesModel.Annotations.Clear();
+            for (int i = 0; i < barItems.Count && i < topDevices.Count; i++)
+            {
+                var device = topDevices[i];
+                var customLabel = $"{device.Count} ({device.Percentage:F1}%)";
+
+                // Verwende Annotation für benutzerdefinierte Labels
+                var annotation = new OxyPlot.Annotations.TextAnnotation
+                {
+                    Text = customLabel,
+                    TextPosition = new DataPoint(device.Count / 2.0, i),
+                    TextColor = OxyColors.White,
+                    Stroke = OxyColors.Transparent,
+                    StrokeThickness = 0,
+                    FontSize = 11,
+                    FontWeight = OxyPlot.FontWeights.Bold,
+                    TextHorizontalAlignment = OxyPlot.HorizontalAlignment.Center,
+                    TextVerticalAlignment = OxyPlot.VerticalAlignment.Middle
+                };
+                topDevicesModel.Annotations.Add(annotation);
+            }
+
             topDevicesModel.Series.Add(series);
 
             if (TopDevicesChart != null)

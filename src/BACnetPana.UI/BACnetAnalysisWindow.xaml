@@ -478,14 +478,17 @@
                                         <RowDefinition Height="Auto"/>
                                         <RowDefinition Height="*"/>
                                         <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
                                     </Grid.RowDefinitions>
 
                                     <TextBlock Grid.Row="0" Grid.Column="0" Text="BACnet-Geräte (Top 10 Anfragen)" FontWeight="Bold" Margin="0,0,0,6"/>
                                     <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TopDevicesCountLabel" Text="Geräte: 0" HorizontalAlignment="Right" FontWeight="Bold" Foreground="#17A2B8"/>
 
-                                    <oxy:PlotView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TopDevicesChart" Height="240" Margin="0,6,0,0" PreviewMouseWheel="PlotView_PreviewMouseWheel" />
+                                    <oxy:PlotView Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TopDevicesChart" Height="240" Margin="0,6,0,0" PreviewMouseWheel="PlotView_PreviewMouseWheel" MouseMove="TopDevicesChart_MouseMove" />
 
-                                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Text="Hinweis: nicht ermittelbar = kein I-Am oder I-Have von diesem Gerät empfangen" Margin="0,8,0,0" Foreground="#555" FontStyle="Italic" />
+                                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" x:Name="TopDevicesInfoLabel" Text="Bewegen Sie die Maus über die Balken, um Details anzuzeigen..." Margin="0,8,0,0" Foreground="#999" FontSize="11" TextWrapping="Wrap" MinHeight="40" FontStyle="Italic" />
+
+                                    <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Text="Hinweis: nicht ermittelbar = kein I-Am oder I-Have von diesem Gerät empfangen" Margin="0,4,0,0" Foreground="#555" FontStyle="Italic" FontSize="10" />
                                 </Grid>
                             </Border>
 
