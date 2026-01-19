@@ -1091,13 +1091,21 @@ namespace bacneTPana.UI
                 TopCovPacketsCountLabel.Text = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", totalCovCount, ratePerMinute);
             }
 
+            var totalTopCount = topCovPackets.Sum(x => (int)x.Count);
             var formattedCovPackets = topCovPackets
-                .Select(x => new
+                .Select(x =>
                 {
-                    CovPacket = x.DisplayFormat,
-                    Count = x.Count,
-                    RatePerMinute = x.RatePerMinute,
-                    DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} Total - {1:F2}/min", x.Count, x.RatePerMinute)
+                    var count = (int)x.Count;
+                    var ratePerMinute = duration > 0 ? (count / duration) * 60.0 : 0.0;
+                    var percentage = totalTopCount > 0 ? (count * 100.0) / totalTopCount : 0.0;
+                    return new
+                    {
+                        CovPacket = x.DisplayFormat,
+                        Count = count,
+                        RatePerMinute = ratePerMinute,
+                        Percentage = percentage,
+                        DisplayValue = string.Format(CultureInfo.GetCultureInfo("de-DE"), "{0} ({1:F1}%)", count, percentage)
+                    };
                 })
                 .OrderByDescending(x => x.Count)
                 .ToList();
@@ -1140,8 +1148,8 @@ namespace bacneTPana.UI
 
             var series = new BarSeries
             {
-                FillColor = OxyColor.FromRgb(255, 165, 0),  // Orange
-                StrokeColor = OxyColor.FromRgb(255, 140, 0), // DarkOrange
+                FillColor = OxyColor.FromRgb(255, 165, 0),
+                StrokeColor = OxyColor.FromRgb(255, 140, 0),
                 StrokeThickness = 1,
                 BarWidth = 0.6,
                 LabelPlacement = LabelPlacement.Inside,
@@ -1149,7 +1157,7 @@ namespace bacneTPana.UI
                 TextColor = OxyColors.White
             };
 
-            // Manuelles Hinzufügen von BarItems und Annotations
+            topCovModel.Annotations.Clear();
             for (int i = 0; i < formattedCovPackets.Count; i++)
             {
                 var item = formattedCovPackets[i];
@@ -1168,7 +1176,9 @@ namespace bacneTPana.UI
                     TextVerticalAlignment = OxyPlot.VerticalAlignment.Middle,
                     TextColor = OxyColors.White,
                     Stroke = OxyColors.Transparent,
-                    StrokeThickness = 0
+                    StrokeThickness = 0,
+                    FontSize = 11,
+                    FontWeight = OxyPlot.FontWeights.Bold
                 };
                 topCovModel.Annotations.Add(annotation);
             }
@@ -1178,6 +1188,65 @@ namespace bacneTPana.UI
             {
                 TopCovPacketsChart.Model = topCovModel;
                 TopCovPacketsChart.Controller = _noWheelController;
+            }
+
+            if (TopCovPacketsInfoLabel != null)
+            {
+                TopCovPacketsInfoLabel.Text = "Bewegen Sie die Maus über einen Balken für Details zum COV-Paket.";
+            }
+        }
+
+        private void TopCovPacketsChart_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (TopCovPacketsChart?.Model == null)
+                return;
+
+            var model = TopCovPacketsChart.Model;
+            var categoryAxis = model.Axes.FirstOrDefault(a => a is CategoryAxis) as CategoryAxis;
+            if (categoryAxis == null)
+                return;
+
+            var pos = e.GetPosition(TopCovPacketsChart);
+            var yData = categoryAxis.InverseTransform(pos.Y);
+            var series = model.Series.OfType<BarSeries>().FirstOrDefault();
+            if (series == null || series.Items.Count == 0)
+                return;
+
+            var index = (int)Math.Round(yData);
+            index = Math.Max(0, Math.Min(series.Items.Count - 1, index));
+
+            var itemsSource = (categoryAxis.ItemsSource as System.Collections.IList);
+            if (itemsSource == null || index >= itemsSource.Count)
+                return;
+
+            dynamic item = itemsSource[index];
+            try
+            {
+                int count = (int)item.Count;
+                double percentage = (double)item.Percentage;
+                double perMinute = (double)item.RatePerMinute;
+                string covPacket = (string)item.CovPacket;
+
+                var info = $"COV-Paket: {covPacket}\n" +
+                           $"Gesamt: {count}\n" +
+                           $"Durchschnitt: {perMinute:F2}/Min\n" +
+                           $"Rel. Verteilung: {percentage:F1}%";
+
+                if (TopCovPacketsInfoLabel != null)
+                    TopCovPacketsInfoLabel.Text = info;
+            }
+            catch
+            {
+                if (TopCovPacketsInfoLabel != null)
+                    TopCovPacketsInfoLabel.Text = "Bewegen Sie die Maus über einen Balken für Details zum COV-Paket.";
+            }
+        }
+
+        private void TopCovPacketsChart_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (TopCovPacketsInfoLabel != null)
+            {
+                TopCovPacketsInfoLabel.Text = "Bewegen Sie die Maus über einen Balken für Details zum COV-Paket.";
             }
         }
     }
